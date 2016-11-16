@@ -23,15 +23,38 @@ IsingModel::~IsingModel() {}
 void IsingModel::setNumThreads(int num) {
     if(nThreads < 1) return;
     nThreads = num;
+    hasBeenSetup=false;
 }
 
 
-/* (void) setNumSpins
- *    | How many spins to use.
+/* (void) setNumMCSteps 
+ *    | How many MC steps to perform 
+ *  I | (int) number of steps 
+ */
+void IsingModel::setNumThreads(int num) {
+    if(num < 1) return;
+    nMCSteps = num;
+    hasBeenSetup=false;
+}
+
+
+/* (void) setLatticeDepth
+ *    | How many steps to simulate into the fractal lattice 
+ *  I | (int) depth 
+ */
+void IsingModel::setLatticeDepth(int num) {
+    latticeDepth=num;
+    hasBeenSetup=false;
+}
+
+
+/* (void) setInteractionSigma
+ *    | The distance coupling exponent on the J_ij 
  *  I | (int) number of spins 
  */
-void IsingModel::setNumSpins(int num) {
-    nSpins=num;
+void IsingModel::setLatticeDepth(double sig) {
+    interactionSigma=sig;
+    hasBeenSetup=false;
 }
 
 
@@ -42,6 +65,19 @@ void IsingModel::setNumSpins(int num) {
 void IsingModel::setHausdorffDimension(double dim) {
     if(dim <= 0) return;
     hausdorffDim=dim;
+    hasBeenSetup=false;
+}
+
+
+/* (void) setHausdorffMethod
+ *    | Set the lattice Hausdorff scaling method.
+ *  I | (double) method to use:
+ *    |         - SCALING   = modify separation
+ *    |         - SPLITTING = modify # divisions
+ */
+void IsingModel::setHausdorffMethod(char* hmtd) {
+    hausdorffMethod=hmtd;
+    hasBeenSetup=false;
 }
 
 
@@ -53,6 +89,7 @@ void IsingModel::setHausdorffDimension(double dim) {
 void IsingModel::setCouplingConsts(double tH, double tJ) {
     H=tH;
     J=tJ;
+    hasBeenSetup=false;
 }
 
 
@@ -63,6 +100,7 @@ void IsingModel::setCouplingConsts(double tH, double tJ) {
 void IsingModel::setTemperature(double tkbT) {
     if (tkbT < 0) return;
     kbT=tkbT;
+    hasBeenSetup=false;
 }
 
 
@@ -105,7 +143,7 @@ int IsingModel::getMagnetization() {
  */
 double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
     double energy=0;
-    for(int i=0; i<nSpins; i++) {
+    for(int i=0; i<nLatticePoints; i++) {
         spin s=spinArray.at(i);
         if (!s.active) continue;
         bool spinFlip=
@@ -113,7 +151,7 @@ double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
 
         energy += h()*s.S*spinFlip;
 
-        for(int j=0; j<nSpins; j++) {
+        for(int j=0; j<nLatticePoints; j++) {
             spin ts=spinArray.at(j);
             if(!ts.active) continue;
             if(i==j)       continue;
@@ -152,11 +190,72 @@ double IsingModel::computePartitionFunction(int start, std::vector<int> flips) {
 }
 
 
+/* (void) setup 
+ *    | Prepare the class object for simulation 
+ */
 void IsingModel::setup() {
+    
+    // Calculate the lattice dimensions from the input
+    // Hausdorff dimension
+    if(hausdorffMethod=="SCALING") {
+        hausdorffScale=pow(hausdorffSlices,-1/hausdorffDimension);
+    }
+
+    // Check that the dimensions are reasoable
+    if(hausdorffScale > 1/hausdorffSlices) {
+        std::cout<<"ERROR: Invalid Hausdorff scaling"<<std::endl;
+        exit EXIT_FAILURE; 
+    }
+    
+    // Keep track of the number of site coordinates along each axis
+    for(int i=0; i<ceil(hausdorffDimension); i++) {
+        latticeDimensions.push_back(pow(hausdorffSlices,latticeDepth));
+    }
+
+    // Keep track of the number of lattice points,
+    // this is the length of the spinArray
+    nLatticePoints=1;
+    for(int i : latticeDimensions) nLatticePoints *= i;
+
+    // Keep track of the number of active spins
+    // (See my notes for how the recursion here is derived)
+    nSpins=nLatticePoints;
+    for(int i=0; i<latticeDepth; i++) {
+        nSpins-=2*pow(hausdorffSlices,2)
+            *pow(2*hausdorffSlices+1,i)
+            *(latticeDepth-i)
+    }
+
+    
+
+    hasBeenSetup=true;
+}
+
+
+/* (void) runMonteCarlo 
+ *    | Run the Monte Carlo simulation (spin-flipping) 
+ */
+void IsingModel::runMonteCarlo() {
+    if(!hasBeenSetup) {
+        std::cout<<"ERROR: Object has not been setup!"<<std::endl;
+        exit EXIT_FAILURE; 
+    }
 
 }
 
 
-void IsingModel::runMonteCarlo() {
+/* (void) monteCarloStep 
+ *    | Perform one run over the lattice, attempting spin-flips 
+ */
+void IsingModel::monteCarloStep() {
+
+}
+
+
+/* (void) getFreeEnergy 
+ *    | Perform one run over the lattice, attempting spin-flips 
+ *    | SIMPLE: Nearest-neighbors only!
+ */
+void IsingModel::simpleMonteCarloStep() {
 
 }

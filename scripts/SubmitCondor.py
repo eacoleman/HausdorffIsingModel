@@ -6,14 +6,15 @@ pwd=os.environ['PWD']
 
 # get options
 parser = OptionParser(description='Submit condor jobs for anaSubstructure calls.')
-parser.add_option('--indir',      action='store', dest='indir',      default="",    help='Input LHE sample directory')
-parser.add_option('--outdir',     action='store', dest='outdir',     default="./",  help='Location of output directory')
-parser.add_option('--outdirname', action='store', dest='outdirname', default="anafull",  help='Location of output directory')
-parser.add_option('--evPerJob',   action='store', dest='evPerJob',   default=10000, help='Number of events to run over in each job')
-parser.add_option('--maxEvents',  action='store', dest='maxEvents',  default=50000, help='Number of events in each input sample')
-parser.add_option('--anaSubLoc',  action='store', dest='anaSubLoc',  default="%s/anaSubstructure"%(pwd),            help='Location of anaSubstructure')
-parser.add_option('--fastJetLoc', action='store', dest='fastJetLoc', default="%s/fastjet/fastjet-install/"%(pwd),   help='Location of fastjet-install')
-parser.add_option('--cfg',        action='store', dest='cfg',        default="rhe",   help='Settings to pass to anaSubstructure')
+parser.add_option('--indir',       action='store', dest='indir',    default=pwd, help='Input LHE sample directory')
+parser.add_option('--outdir',      action='store', dest='outdir',   default=pwd, help='Location of output directory')
+parser.add_option('--hList',       action='store', dest='h',        default='',  help='List of config h fields')
+parser.add_option('--jList',       action='store', dest='j',        default='',  help='List of config J fields')
+parser.add_option('--tList',       action='store', dest='t',        default='',  help='List of config temps')
+parser.add_option('--sigList',     action='store', dest='sig',      default='',  help='List of config sigmas')
+parser.add_option('--mcStepsList', action='store', dest='mcsteps',  default='',  help='List of config # MC steps')
+parser.add_option('--dimList',     action='store', dest='dim',      default='',  help='List of config dimensions')
+parser.add_option('--depthList',   action='store', dest='depth',    default='',  help='List of config depths')
 
 (options, args) = parser.parse_args()
 cmssw_base = os.environ['CMSSW_BASE']
@@ -26,37 +27,41 @@ if options.indir == "":
 # check that output directory exists
 options.outdir = os.path.abspath(options.outdir)
 if not os.path.exists(options.outdir):
-    os.system('mkdir -p ' + options.outdir)
-
-# get ls of samples
-files = os.listdir("/eos/uscms/%s"%options.indir)
+    os.system('mkdir -p ' + options.outdir + '/stdout/')
 
 from math import ceil
 nFilesPerLHE=int(ceil(float(options.maxEvents)/float(options.evPerJob)))
 
 # prepare all configs
-for i,j in [(i,j) for i in range(len(files)) for j in range(nFilesPerLHE)]:
-    if files[i].split('.')[-1] != "lhe" : continue
-    current_name = options.outdir + '/' + files[i].split('.')[0] + "_%i"%j
-    current_conf = open(current_name + '.condor','w')
-    current_shel = open(current_name + '.sh','w')
+for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
+        for a in options.h.split(',')
+        for b in options.j.split(',')
+        for c in options.t.split(',')
+        for d in options.sig.split(',')
+        for f in options.mcsteps.split(',')
+        for f in options.dim.split(',')
+        for g in options.depth.split(',')] :
 
-    minEv = int(options.evPerJob)*j
-    maxEv = int(options.evPerJob)*(j+1)-1
+    current_name = "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+    current_conf = open(current_name.replace('.','p') + '.condor','w')
+    current_shel = open(current_name.replace('.','p') + '.sh','w')
 
     # write condor config
     conf_tmpl = open('../condor/CondorConf.tmpl.condor')
     for line in conf_tmpl:
-        if 'OUTPUT_PATH' in line: line = line.replace('OUTPUT_PATH', options.outdir)
-        if 'OUTDIRFOLD'  in line: line = line.replace('OUTDIRFOLD',  options.outdirname)
-        if 'INDIR'       in line: line = line.replace('INDIR',       "root://cmseos.fnal.gov///%s"%options.indir)
-        if 'FILE'        in line: line = line.replace('FILE',        files[i].split('.')[0])
-        if 'NAME'        in line: line = line.replace('NAME',        files[i].split('.')[0] + "_%i"%j)
-        if 'CMSSWBASE'   in line: line = line.replace('CMSSWBASE',   cmssw_base)
-        if 'MINEV'       in line: line = line.replace('MINEV',       minEv)
-        if 'MAXEV'       in line: line = line.replace('MAXEV',       maxEv)
-        if 'TAG'         in line: line = line.replace('TAG',         "%i"%j)
-        if 'CFG'         in line: line = line.replace('CFG',         options.cfg)
+        if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
+        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outdir)
+        if 'OUTPUT_PATH'   in line: line = line.replace('OUTPUT_PATH',   "%s/stdout/"%options.outdir)
+        if 'INDIR'         in line: line = line.replace('INDIR',         "%s/"%options.indir)
+        if 'PARAM_H'       in line: line = line.replace('PARAM_H',       h          )
+        if 'PARAM_J'       in line: line = line.replace('PARAM_J',       j          )
+        if 'PARAM_T'       in line: line = line.replace('PARAM_T',       t          )
+        if 'PARAM_SIG'     in line: line = line.replace('PARAM_SIG',     sig        )
+        if 'PARAM_MCSTEPS' in line: line = line.replace('PARAM_MCSTEPS', mcsteps    )
+        if 'PARAM_DIM'     in line: line = line.replace('PARAM_DIM',     dim        )
+        if 'PARAM_DEPTH'   in line: line = line.replace('PARAM_DEPTH',   depth      )
+        if 'NAME'          in line: line = line.replace('NAME',
+                "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
 
         current_conf.write(line)
 
@@ -65,16 +70,19 @@ for i,j in [(i,j) for i in range(len(files)) for j in range(nFilesPerLHE)]:
     # write shell script
     shel_tmpl = open('../condor/CondorShel.tmpl.sh')
     for line in shel_tmpl:
-        if 'OUTPUT_PATH' in line: line = line.replace('OUTPUT_PATH', options.outdir)
-        if 'OUTDIRFOLD'  in line: line = line.replace('OUTDIRFOLD',  options.outdirname)
-        if 'INDIR'       in line: line = line.replace('INDIR',       "root://cmseos.fnal.gov///%s"%options.indir)
-        if 'FILE'        in line: line = line.replace('FILE',        files[i].split('.')[0])
-        if 'NAME'        in line: line = line.replace('NAME',        files[i].split('.')[0] + "_%i"%j)
-        if 'CMSSWBASE'   in line: line = line.replace('CMSSWBASE',   cmssw_base)
-        if 'MINEV'       in line: line = line.replace('MINEV',       "%i"%minEv)
-        if 'MAXEV'       in line: line = line.replace('MAXEV',       "%i"%maxEv)
-        if 'TAG'         in line: line = line.replace('TAG',         "%i"%j)
-        if 'CFG'         in line: line = line.replace('CFG',         options.cfg)
+        if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
+        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outdir)
+        if 'OUTPUT_PATH'   in line: line = line.replace('OUTPUT_PATH',   "%s/stdout/"%options.outdir)
+        if 'INDIR'         in line: line = line.replace('INDIR',         "%s/"%options.indir)
+        if 'PARAM_H'       in line: line = line.replace('PARAM_H',       h          )
+        if 'PARAM_J'       in line: line = line.replace('PARAM_J',       j          )
+        if 'PARAM_T'       in line: line = line.replace('PARAM_T',       t          )
+        if 'PARAM_SIG'     in line: line = line.replace('PARAM_SIG',     sig        )
+        if 'PARAM_MCSTEPS' in line: line = line.replace('PARAM_MCSTEPS', mcsteps    )
+        if 'PARAM_DIM'     in line: line = line.replace('PARAM_DIM',     dim        )
+        if 'PARAM_DEPTH'   in line: line = line.replace('PARAM_DEPTH',   depth      )
+        if 'NAME'          in line: line = line.replace('NAME',
+                "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
 
         current_shel.write(line)
 
@@ -83,10 +91,19 @@ for i,j in [(i,j) for i in range(len(files)) for j in range(nFilesPerLHE)]:
     current_conf.close()
     current_shel.close()
 
+# end loop so that Python writes files
 # run jobs
-for i,j in [(i,j) for i in range(len(files)) for j in range(nFilesPerLHE)]:
-    if files[i].split('.')[-1] != "lhe" : continue
-    current_name = files[i].split('.')[0] + "_%i"%j
-    os.chdir(options.outdir + '/')
-    os.system('condor_submit ' + current_name + '.condor')
+for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
+        for a in options.h.split(',')
+        for b in options.j.split(',')
+        for c in options.t.split(',')
+        for d in options.sig.split(',')
+        for f in options.mcsteps.split(',')
+        for f in options.dim.split(',')
+        for g in options.depth.split(',')] :
 
+    current_name = "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+    current_conf = current_name.replace('.','p') + '.condor'
+
+    os.chdir(options.outdir + '/')
+    os.system('condor_submit ' + current_conf)
