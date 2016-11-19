@@ -12,15 +12,14 @@
 
 // Constructors/destructors implemented simply
 // (because of number of options)
-IsingModel::IsingModel() {}
-IsingModel::~IsingModel() {}
+IsingModel::~IsingModel() {};
 
 
 /* (void) setNumThreads
  *    | How many threads to use at a time.
  *  I | (int) number of threads
  */
-void IsingModel::setNumThreads(int num) {
+void IsingModel::setNumThreads(const int num) {
     if(nThreads < 1) return;
     nThreads = num;
     hasBeenSetup=false;
@@ -31,7 +30,7 @@ void IsingModel::setNumThreads(int num) {
  *    | How many MC steps to perform 
  *  I | (int) number of steps 
  */
-void IsingModel::setNumThreads(int num) {
+void IsingModel::setNumMCSteps(const int num) {
     if(num < 1) return;
     nMCSteps = num;
     hasBeenSetup=false;
@@ -42,7 +41,7 @@ void IsingModel::setNumThreads(int num) {
  *    | How many steps to simulate into the fractal lattice 
  *  I | (int) depth 
  */
-void IsingModel::setLatticeDepth(int num) {
+void IsingModel::setLatticeDepth(const int num) {
     latticeDepth=num;
     hasBeenSetup=false;
 }
@@ -52,7 +51,7 @@ void IsingModel::setLatticeDepth(int num) {
  *    | The distance coupling exponent on the J_ij 
  *  I | (int) number of spins 
  */
-void IsingModel::setLatticeDepth(double sig) {
+void IsingModel::setInteractionSigma(const double sig) {
     interactionSigma=sig;
     hasBeenSetup=false;
 }
@@ -62,7 +61,7 @@ void IsingModel::setLatticeDepth(double sig) {
  *    | Set the lattice Hausdorff dimension.
  *  I | (double) dimension to use 
  */
-void IsingModel::setHausdorffDimension(double dim) {
+void IsingModel::setHausdorffDimension(const double dim) {
     if(dim <= 0) return;
     hausdorffDim=dim;
     hasBeenSetup=false;
@@ -75,7 +74,7 @@ void IsingModel::setHausdorffDimension(double dim) {
  *    |         - SCALING   = modify separation
  *    |         - SPLITTING = modify # divisions
  */
-void IsingModel::setHausdorffMethod(char* hmtd) {
+void IsingModel::setHausdorffMethod(char* const hmtd) {
     hausdorffMethod=hmtd;
     hasBeenSetup=false;
 }
@@ -86,7 +85,7 @@ void IsingModel::setHausdorffMethod(char* hmtd) {
  *  I | (double) value of H, magnetic field coupling 
  *    | (double) value of J, neighbor couplings
  */
-void IsingModel::setCouplingConsts(double tH, double tJ) {
+void IsingModel::setCouplingConsts(const double tH, const double tJ) {
     H=tH;
     J=tJ;
     hasBeenSetup=false;
@@ -97,7 +96,7 @@ void IsingModel::setCouplingConsts(double tH, double tJ) {
  *    | Set the temperature of the system
  *  I | (double) value of k_B * T (>0) to use 
  */
-void IsingModel::setTemperature(double tkbT) {
+void IsingModel::setTemperature(const double tkbT) {
     if (tkbT < 0) return;
     kbT=tkbT;
     hasBeenSetup=false;
@@ -107,7 +106,7 @@ void IsingModel::setTemperature(double tkbT) {
 /* (vector<int>) getSpinArray 
  *    | Returns an array of the spins (+1,-1, or 0)
  */
-std::vector<int> IsingModel::getSpinArray() {
+const std::vector<int> IsingModel::getSpinArray() {
     std::vector<int> spins(0);
     for(const auto &it : spinArray) {
         spins.push_back(it.active ? it.S : 0);
@@ -120,7 +119,7 @@ std::vector<int> IsingModel::getSpinArray() {
  *    | Returns an array of the number of spins along
  *    | each lattice edge
  */
-std::vector<int> IsingModel::getLatticeDimensions() {
+const std::vector<int> IsingModel::getLatticeDimensions() {
     return latticeDimensions;
 }
 
@@ -128,7 +127,7 @@ std::vector<int> IsingModel::getLatticeDimensions() {
 /* (int) getMagnetization() 
  *    | Returns the magnetization of the lattice 
  */
-int IsingModel::getMagnetization() {
+const int IsingModel::getMagnetization() {
     int mag=0;
     for(const auto &it : spinArray) {
        mag += it.S*it.active;
@@ -141,7 +140,7 @@ int IsingModel::getMagnetization() {
  *    | Get the free energy of the system (no multithread)
  *  I | (vector<int> (default: empty)) array of spin indices to flip 
  */
-double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
+const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
     double energy=0;
     for(int i=0; i<nLatticePoints; i++) {
         spin s=spinArray.at(i);
@@ -155,7 +154,7 @@ double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
             spin ts=spinArray.at(j);
             if(!ts.active) continue;
             if(i==j)       continue;
-            bool tspinFlips=
+            bool tspinFlip=
                 (std::find(flips.begin(),flips.end(),j)!=flips.end() ? -1 : 1); 
 
             energy += K()*pow(getDistanceSq(s,ts),interactionSigma/2)
@@ -171,15 +170,15 @@ double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
  *  I | (int (default: 0)) index to start the trace at 
  *    | (vector<int> (default: empty)) array of spin indices to flip 
  */
-double IsingModel::computePartitionFunction(int start, std::vector<int> flips) {
+const double IsingModel::computePartitionFunction(const int start, const std::vector<int>& flips) {
     double Z=0;
     
     std::vector<int> newflips = flips; 
     newflips.push_back(start);
 
     // add e^-BH with S_i = +1 and S_i = -1
-    Z+=exp(getFreeEnergy(spinArray,flips));
-    Z+=exp(getFreeEnergy(spinArray,newflips));
+    Z+=exp(getFreeEnergy(flips));
+    Z+=exp(getFreeEnergy(newflips));
 
     // branch into computations with history 
     // S_i = +1 and S_i = -1
@@ -198,17 +197,17 @@ void IsingModel::setup() {
     // Calculate the lattice dimensions from the input
     // Hausdorff dimension
     if(hausdorffMethod=="SCALING") {
-        hausdorffScale=pow(hausdorffSlices,-1/hausdorffDimension);
+        hausdorffScale=pow(hausdorffSlices,-1/hausdorffDim);
     }
 
     // Check that the dimensions are reasoable
     if(hausdorffScale > 1/hausdorffSlices) {
         std::cout<<"ERROR: Invalid Hausdorff scaling"<<std::endl;
-        exit EXIT_FAILURE; 
+        exit(EXIT_FAILURE); 
     }
     
     // Keep track of the number of site coordinates along each axis
-    for(int i=0; i<ceil(hausdorffDimension); i++) {
+    for(int i=0; i<ceil(hausdorffDim); i++) {
         latticeDimensions.push_back(pow(hausdorffSlices,latticeDepth));
     }
 
@@ -223,9 +222,10 @@ void IsingModel::setup() {
     for(int i=0; i<latticeDepth; i++) {
         nSpins-=2*pow(hausdorffSlices,2)
             *pow(2*hausdorffSlices+1,i)
-            *(latticeDepth-i)
+            *(latticeDepth-i);
     }
 
+    // Generate the lattice array
     
 
     hasBeenSetup=true;
@@ -238,7 +238,7 @@ void IsingModel::setup() {
 void IsingModel::runMonteCarlo() {
     if(!hasBeenSetup) {
         std::cout<<"ERROR: Object has not been setup!"<<std::endl;
-        exit EXIT_FAILURE; 
+        exit(EXIT_FAILURE); 
     }
 
 }

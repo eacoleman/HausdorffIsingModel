@@ -10,38 +10,41 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <pthread.h>
 #include <cstdlib>
+#include <algorithm>
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 class IsingModel {
     public :
         // Constructors, destructor
         IsingModel();
-        virtual ~IsingModel() = {};
+        virtual ~IsingModel();
         
         // Settings
         void setNumThreads        (const int num    );
         void setNumMCSteps        (const int num    );
         void setLatticeDepth      (const int num    );
         void setHausdorffDimension(const double dim );
-        void setHausdorffMethod   (const char* hmtd );
-        void setInteractionSigma  (const double sig );    
+        void setHausdorffMethod   (char* const  hmtd );
+        void setInteractionSigma  (const double sig );   
         void setTemperature       (const double tkbT);
         void setCouplingConsts    (const double H,
-                                   const double J);    
+                                   const double J); 
 
         const std::vector<int> getSpinArray();
         const std::vector<int> getLatticeDimensions();
-        const int    getNumThreads()         = {return nThreads        };
-        const int    getNumSpins()           = {return nSpins          };
-        const int    getNumLatticePoints()   = {return nLatticePoints  };
-        const int    getLatticeDepth()       = {return latticeDepth    };
-        const double getHausdorffDimension() = {return hausdorffDim    };
-        const double getHausdorffMethod()    = {return hausdorffMethod };
-        const double getHausdorffSlices()    = {return hausdorffSlices };
-        const double getHausdorffScale()     = {return hausdorffScale  };
-        const double getInteractionSigma()   = {return interactionSigma};    
-        const double getNumMCSteps()         = {return nMCSteps        };
+        const std::string      getHausdorffMethod() 
+                                    {return hausdorffMethod ;}
+        const int    getNumThreads()         {return nThreads        ;}
+        const int    getNumSpins()           {return nSpins          ;}
+        const int    getNumLatticePoints()   {return nLatticePoints  ;}
+        const int    getLatticeDepth()       {return latticeDepth    ;}
+        const double getHausdorffDimension() {return hausdorffDim    ;}
+        const double getHausdorffSlices()    {return hausdorffSlices ;}
+        const double getHausdorffScale()     {return hausdorffScale  ;}
+        const double getInteractionSigma()   {return interactionSigma;}   
+        const double getNumMCSteps()         {return nMCSteps        ;}
         
         // Observables
         const int    getMagnetization();
@@ -52,10 +55,10 @@ class IsingModel {
                 const std::vector<int>& flips=std::vector<int>());
 
         // Shorthand definitions
-        const double K()={return J/kbT                     };
-        const double h()={return H/kbT                     };
-        const int    m()={return getMagnetization()        };
-        const double Z()={return computePartitionFunction()};
+        const double K() {return J/kbT                     ;}
+        const double h() {return H/kbT                     ;}
+        const int    m() {return getMagnetization()        ;}
+        const double Z() {return computePartitionFunction();}
 
         // Simulation
         void setup();
@@ -80,8 +83,8 @@ class IsingModel {
         double hausdorffDim=1;
         double hausdorffSlices=2;
         double hausdorffScale=1/3;
-        char*  hausdorffMethod="SCALING";
         int    nMCSteps=10000;
+        std::string hausdorffMethod="SCALING";
 
         // Thermodynamic variables
         double kbT=1;
@@ -95,6 +98,6 @@ class IsingModel {
         bool   hasBeenSetup=false;
         void   monteCarloStep();
         void   simpleMonteCarloStep();
-        double computePartitionFunction();
+        double getDistanceSq(const spin i1, const spin i2);
          
 };
