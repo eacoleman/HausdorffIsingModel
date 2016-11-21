@@ -50,6 +50,7 @@ class IsingModel {
         const int    getMagnetization();
         const double getFreeEnergy(
                 const std::vector<int>& flips=std::vector<int>());
+        const double getFreeEnergy(const int flip);
         const double computePartitionFunction(
                 const int start=0,
                 const std::vector<int>& flips=std::vector<int>());
@@ -75,7 +76,7 @@ class IsingModel {
         // Settings
         std::vector<spin> spinArray;
         std::vector<int > latticeDimensions;
-        double latticeDepth=1;
+        int    latticeDepth=1;
         int    nThreads=1;
         int    nSpins=0;
         int    nLatticePoints=0;
@@ -90,6 +91,7 @@ class IsingModel {
         double kbT=1;
         double H=1;
         double J=1;
+        double freeEnergy=0;
 
         // Observables
         int magnetization = 0;
@@ -99,5 +101,8 @@ class IsingModel {
         void   monteCarloStep();
         void   simpleMonteCarloStep();
         double getDistanceSq(const spin i1, const spin i2);
+        void   addSpins(const int depth, 
+                        const std::vector<double>& x0, 
+                        const std::vector<double>& x1);
          
 };
