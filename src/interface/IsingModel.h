@@ -70,7 +70,7 @@ class IsingModel {
         typedef struct {
            int S;
            bool active;
-           std::vector<int> coords;
+           std::vector<double> coords;
         } spin;
 
         // Settings

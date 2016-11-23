@@ -201,35 +201,62 @@ const double IsingModel::computePartitionFunction(const int start, const std::ve
 
 
 /* (void) addSpins 
- *    | Recursively add spins to the spinArray 
+ *    | Recursively add spins to the spinArray. 
+ *    | Each iteration will add the spins between the endpoints.
  *  I | (int) depth to build to
  *    | (double) vector of coordinates to start fractal at
  *    | (double) vector of coordinates to end fractal at
  */
-void IsingModel::addSpins(const int depth, const std::vector<double>& x0, const std::vector<double>& x1) {
-
-    // Each iteration will add the spins between the endpoints
-    // TODO: More development. Current template is slow. 
-
-    // i is the dimension we are building spins in 
-    // j is the index of the hausdorff slice we are in
-    // k is an index to construct other coordinates of the sites
-    for(int i=0; i <  latticeDimensions.size(); i++) {
-    for(int k=0; k <  latticeDimensions.size(); k++) {
-    for(int j=1; j <= hausdorffSlices; j++) {
-        double delta   = abs(x1.at(i)-x0.at(i));
-        double slices  = hausdorffSlices*hausdorffScale*delta;
-        double spacing = (delta - slices)/(hausdorffSlices-1);
-        double newstart = x0.at(i) + (j-1)*hausdorffScale*delta + j*spacing; 
-        double newend   = newstart + hausdorffScale*delta;
-
-        // j is the index of new lattice points on slice i
-        spin ts;
-        ts.active=1;
-        ts.S=1;
-        ts.coords.push_back(newstart);
+void IsingModel::addSpins(const int depth,
+        const std::vector<double>& x0, 
+        const std::vector<double>& x1) {
         
-        spinArray.push_back(ts);
+    double delta   = abs(x1.at(0)-x0.at(0));
+    double slices  = hausdorffSlices*hausdorffScale*delta;
+    double spacing = (delta - slices)/(hausdorffSlices);
+
+
+    int iF, iN;
+    std::vector<int> vI(latticeDimensions.size() - 1),
+                     vN(latticeDimensions.size() - 1);
+
+    // Create a vector of indices, one for each dimension, 
+    // minus the one we are adding the spins along,
+    // and loop through all permutations
+    for(iF=0, std::fill(vI.begin(),vI.end(),0);
+        iF<latticeDimensions.size()-1 || vI.at(0) != -1;
+        permuteVectorOfIndices(vI, iF, hausdorffSlices)) {
+
+    // Create a secondary loop to select whether we want
+    // the left or the right spin for a given spacing
+    for(iN=0, std::fill(vN.begin(),vN.end(),0);
+        iN<latticeDimensions.size()-1 || vN.at(0) != -1;
+        permuteVectorOfIndices(vN, iN, 2)) {
+        
+        // current position in (d-1)-space is 
+        // (vN_mu) * spacing + (vI_mu +1)*s*delta + (vI_mu * spacing)
+        std::vector<double> cPos(latticeDimensions.size());
+        for(int d=1; d < latticeDimensions.size(); d++) {
+            cPos.at(d) = vN.at(d)*spacing 
+                         + (vI.at(d)+1)*hausdorffScale*delta 
+                         + vI.at(d)*spacing;
+        }
+
+    // Loop through the slices for the C^1 we are adding in 
+    for(int i=1; i < hausdorffSlices; i++) {
+        double newstart = x0.at(0) 
+                          + i*hausdorffScale*delta 
+                          + (i-1)*spacing;
+
+        // Add a spin to the left and right of the lattice space
+        for(int side=0; side < 1; side++) {
+            spin ts;
+            ts.active=1;
+            ts.S=1;
+            ts.coords=cPos;
+            ts.coords.at(0)=newstart+side*spacing;
+            spinArray.push_back(ts);
+        }
         
         if(depth == 0) {
             return;
