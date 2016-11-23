@@ -200,9 +200,33 @@ const double IsingModel::computePartitionFunction(const int start, const std::ve
 }
 
 
+/* (void) nextPermutation
+ *    | For a vector of indices and some uniform maximum index,
+ *    | get a new tuple of indices from the current state by 
+ *    | adding one to the lowest index and "carrying" over.
+ *    | Return tvN[0]=-1 when finished, for the loop end condition
+ *  I | (std::vector<int>) the array of indices to permute 
+ *    | (int) the maximum array index
+ */
+void IsingModel::nextPermutation(std::vector<int> tvN, const int max) {
+    for(size_t i=0; i<tvN.size(); i++) {
+        if(tvN.at(i) < max) {
+            tvN.at(i)++;
+            return;
+        }
+        else if(i< tvN.size()-1) {
+            tvN.at(i)=0;
+        }
+        else if(i==tvN.size()-1) {
+            tvN.at(0)=-1;
+            return;
+        }
+    }
+}
+
 /* (void) addSpins 
- *    | Recursively add spins to the spinArray. 
- *    | Each iteration will add the spins between the endpoints.
+ *    | Adds spins to the spinArray by isolating each smallest hypercube
+ *    | making up the lattice at a given depth 
  *  I | (int) depth to build to
  *    | (double) vector of coordinates to start fractal at
  *    | (double) vector of coordinates to end fractal at
@@ -211,60 +235,55 @@ void IsingModel::addSpins(const int depth,
         const std::vector<double>& x0, 
         const std::vector<double>& x1) {
         
-    double delta   = abs(x1.at(0)-x0.at(0));
-    double slices  = hausdorffSlices*hausdorffScale*delta;
-    double spacing = (delta - slices)/(hausdorffSlices);
+    double delta    = abs(x1.at(0)-x0.at(0));
+    //double sliceLen = hausdorffScale * delta;
+    //double spaceLen = (delta - sliceLen*hausdorffSlices)/(hausdorffSlices-1);
 
+    // Create an array of length dimension, p
+    // Containing arrays of length depth, d
+    // Which will contain our p*d indices 
+    std::vector<int> vN(latticeDimensions.size()*depth);
 
-    int iF, iN;
-    std::vector<int> vI(latticeDimensions.size() - 1),
-                     vN(latticeDimensions.size() - 1);
-
-    // Create a vector of indices, one for each dimension, 
-    // minus the one we are adding the spins along,
-    // and loop through all permutations
-    for(iF=0, std::fill(vI.begin(),vI.end(),0);
-        iF<latticeDimensions.size()-1 || vI.at(0) != -1;
-        permuteVectorOfIndices(vI, iF, hausdorffSlices)) {
-
-    // Create a secondary loop to select whether we want
-    // the left or the right spin for a given spacing
-    for(iN=0, std::fill(vN.begin(),vN.end(),0);
-        iN<latticeDimensions.size()-1 || vN.at(0) != -1;
-        permuteVectorOfIndices(vN, iN, 2)) {
-        
-        // current position in (d-1)-space is 
-        // (vN_mu) * spacing + (vI_mu +1)*s*delta + (vI_mu * spacing)
+    // Loop over all valid positions for a spin hypercube
+    for(std::fill(vN.begin(),vN.end(),0); 
+        vN.at(0) != -1; 
+        nextPermutation(vN,hausdorffSlices-1)) {
+        // Current position is lower corner of hypercube we produce 
+        // (think in terms of the origin for the unit hypercube, [0,1]^p) 
         std::vector<double> cPos(latticeDimensions.size());
-        for(int d=1; d < latticeDimensions.size(); d++) {
-            cPos.at(d) = vN.at(d)*spacing 
-                         + (vI.at(d)+1)*hausdorffScale*delta 
-                         + vI.at(d)*spacing;
+        for(size_t iDim=0; iDim < latticeDimensions.size(); iDim++) {
+            cPos.at(iDim) += x0.at(iDim);
+            
+            for(int iDepth=0; iDepth < depth; iDepth++) {
+                int depthVal = vN.at(iDim*depth+iDepth);
+                double depthScale = pow(hausdorffScale,depth-iDepth)*delta;
+                cPos.at(iDim) += (1 + (1/hausdorffScale-hausdorffSlices)/(hausdorffSlices-1))
+                                 *depthScale
+                                 *depthVal;
+
+            }
         }
 
-    // Loop through the slices for the C^1 we are adding in 
-    for(int i=1; i < hausdorffSlices; i++) {
-        double newstart = x0.at(0) 
-                          + i*hausdorffScale*delta 
-                          + (i-1)*spacing;
-
-        // Add a spin to the left and right of the lattice space
-        for(int side=0; side < 1; side++) {
+        // - place spins at each corner of a hypercube
+        // - cube will have side length s^d and bottom corner at cPos
+        // - loop will go through e.g. for p=2 (0,0) , (0,1) , (1,0) , (1,1)
+        std::vector<int> cubePoints(latticeDimensions.size());
+        for(std::fill(cubePoints.begin(),cubePoints.end(),0);
+            cubePoints.at(0) != -1;
+            nextPermutation(cubePoints,1)) {
+           
             spin ts;
             ts.active=1;
             ts.S=1;
-            ts.coords=cPos;
-            ts.coords.at(0)=newstart+side*spacing;
-            spinArray.push_back(ts);
-        }
-        
-        if(depth == 0) {
-            return;
-        } else {
-            addSpins(depth-1,newstart,newend);
-        }
-    }}}
+            ts.coords=std::vector<double>(latticeDimensions.size());
+            for(size_t index; index < cubePoints.size(); index++) {
+                ts.coords.at(index) = cubePoints.at(index) * pow(hausdorffScale,depth)*delta
+                                        + cPos.at(index);
+            }
 
+            spinArray.push_back(ts);
+        } 
+    }
 }
 
 
@@ -280,7 +299,7 @@ void IsingModel::setup() {
         hausdorffScale=pow(hausdorffSlices,-1/hausdorffDim);
     }
 
-    // Check that the dimensions are reasoable
+    // Check that the dimensions are reasonable
     if(hausdorffScale > 1/hausdorffSlices) {
         std::cout<<"ERROR: Invalid Hausdorff scaling"<<std::endl;
         exit(EXIT_FAILURE); 
@@ -299,7 +318,7 @@ void IsingModel::setup() {
     // Generate the lattice array
     std::vector<double> x0;
     std::vector<double> x1;
-    for(int i=0; i<latticeDimensions.size(); i++) {
+    for(size_t i=0; i<latticeDimensions.size(); i++) {
         x0.push_back(0);
         x1.push_back(1);
     }

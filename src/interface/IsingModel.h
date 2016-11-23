@@ -101,6 +101,7 @@ class IsingModel {
         void   monteCarloStep();
         void   simpleMonteCarloStep();
         double getDistanceSq(const spin i1, const spin i2);
+        void   nextPermutation(std::vector<int> tvN, const int max);
         void   addSpins(const int depth, 
                         const std::vector<double>& x0, 
                         const std::vector<double>& x1);
