@@ -8,7 +8,7 @@
  *  - Multithreaded Monte Carlo steps                                          *
  *                                                                             *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <pthread.h>
+#include <boost/thread.hpp>
 #include <cstdlib>
 #include <algorithm>
 #include <vector>
@@ -26,7 +26,8 @@ class IsingModel {
         void setNumMCSteps        (const int num    );
         void setLatticeDepth      (const int num    );
         void setHausdorffDimension(const double dim );
-        void setHausdorffMethod   (char* const  hmtd );
+        void setHausdorffMethod   (char* const  hmtd);
+        void setMCMethod          (char* const  mcmd);
         void setInteractionSigma  (const double sig );   
         void setTemperature       (const double tkbT);
         void setCouplingConsts    (const double H,
@@ -36,15 +37,17 @@ class IsingModel {
         const std::vector<int> getLatticeDimensions();
         const std::string      getHausdorffMethod() 
                                     {return hausdorffMethod ;}
+        const std::string      getMCMethod() 
+                                    {return mcMethod;}
         const int    getNumThreads()         {return nThreads        ;}
         const int    getNumSpins()           {return nSpins          ;}
-        const int    getNumLatticePoints()   {return nLatticePoints  ;}
         const int    getLatticeDepth()       {return latticeDepth    ;}
         const double getHausdorffDimension() {return hausdorffDim    ;}
         const double getHausdorffSlices()    {return hausdorffSlices ;}
         const double getHausdorffScale()     {return hausdorffScale  ;}
         const double getInteractionSigma()   {return interactionSigma;}   
         const double getNumMCSteps()         {return nMCSteps        ;}
+        const std::vector<double> getMCInfo(){return mcInfo          ;}
         
         // Observables
         const int    getMagnetization();
@@ -72,6 +75,12 @@ class IsingModel {
            bool active;
            std::vector<double> coords;
         } spin;
+        
+        // Thread information 
+        typedef struct {
+            int threadId;
+            std::vector<int> spinFlips;
+        } threadInfo;
 
         // Settings
         std::vector<spin> spinArray;
@@ -79,13 +88,13 @@ class IsingModel {
         int    latticeDepth=1;
         int    nThreads=1;
         int    nSpins=0;
-        int    nLatticePoints=0;
         double interactionSigma=1;
         double hausdorffDim=1;
         double hausdorffSlices=2;
         double hausdorffScale=1/3;
         int    nMCSteps=10000;
         std::string hausdorffMethod="SCALING";
+        std::string mcMethod="HEATBATH";
 
         // Thermodynamic variables
         double kbT=1;
@@ -98,12 +107,14 @@ class IsingModel {
         
         // Simulation
         bool   hasBeenSetup=false;
-        void   monteCarloStep();
-        void   simpleMonteCarloStep();
+        double metropolisStep();
+        double nnMetropolisStep();
+        void*  heatBathStep(void *threadArgs);
         double getDistanceSq(const spin i1, const spin i2);
         void   nextPermutation(std::vector<int> tvN, const int max);
         void   addSpins(const int depth, 
                         const std::vector<double>& x0, 
                         const std::vector<double>& x1);
+        std::vector<double> mcInfo;
          
 };

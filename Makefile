@@ -1,14 +1,14 @@
 CC=g++
 CPP_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(addprefix obj/,$(notdir $(CPP_FILES:.cpp=.o)))
-CC_FLAGS  := -fPIC -std=gnu++11 -c -g -Wall `root-config --cflags` -MMD
+CC_FLAGS  := -fPIC -std=gnu++11 -c -g -Wall `root-config --cflags --glibs` -MMD -lpthread
 RT_FLAGS  := `root-config --cflags --glibs` -lMinuit -lMathMore -lMinuit2
 
 
 all: runIsingModel 
 
 test: libIsingModel.so
-	$(CC) $(CC_FLAGS) scripts/testIsingModel.cpp -LlibIsingModel.so -o $@ $^ 
+	$(CC) $(CC_FLAGS) -I$(ROOTSYS)/include -L$(ROOTSYS)/lib scripts/testIsingModel.cpp -LlibIsingModel.so -o $@ $^ 
 
 runIsingModel: libIsingModel.so
 	$(CC) $(CC_FLAGS) scripts/runIsingModel.cpp -LlibIsingModel.so -o $@ $^ 
