@@ -1,7 +1,7 @@
-CC=g++
+CC=gcc
 CPP_FILES := $(wildcard src/*.cpp)
 OBJ_FILES := $(addprefix obj/,$(notdir $(CPP_FILES:.cpp=.o)))
-CC_FLAGS  := -fPIC -std=c++11 -c `root-config --cflags --glibs` 
+CC_FLAGS  := -Wall -g -std=gnu++11 -c `root-config --cflags --glibs` 
 RT_FLAGS  := `root-config --cflags --glibs` -lMinuit -lMathMore -lMinuit2
 
 all: test run

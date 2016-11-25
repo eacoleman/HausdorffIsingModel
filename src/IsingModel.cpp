@@ -13,6 +13,7 @@
 
 // Constructors/destructors implemented simply
 // (because of number of options)
+IsingModel::IsingModel() {};
 IsingModel::~IsingModel() {};
 
 
@@ -148,6 +149,17 @@ const int IsingModel::getMagnetization() {
     return mag;
 }
 
+double IsingModel::getDistanceSq(spin s1, spin s2) {
+    if(interactionSigma==0) return 1;
+    else {
+        double distance=0;
+        for(int i=0; i < s1.coords.size(); i++) {
+            distance += pow(s1.coords.at(i)-s2.coords.at(i),2);
+        }
+        return distance;
+    }
+}
+
 
 /* (double) getFreeEnergy 
  *    | Get the free energy of the system (no multithread)
@@ -175,9 +187,9 @@ const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
         energy += h()*s.S*spinFlip;
 
         for(int j=0; j<nSpins; j++) {
+            if(i==j)       continue;
             spin ts=spinArray.at(j);
             if(!ts.active) continue;
-            if(i==j)       continue;
             bool tspinFlip=
                 (std::find(flips.begin(),flips.end(),j)!=flips.end() ? -1 : 1); 
 
@@ -195,6 +207,7 @@ const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
  *    | (vector<int> (default: empty)) array of spin indices to flip 
  */
 const double IsingModel::computePartitionFunction(const int start, const std::vector<int>& flips) {
+    if(debug) std::cout<<"\tComputePartitionFunction:"<<std::endl;
     double Z=0;
     
     std::vector<int> newflips = flips; 
@@ -221,17 +234,18 @@ const double IsingModel::computePartitionFunction(const int start, const std::ve
  *  I | (std::vector<int>) the array of indices to permute 
  *    | (int) the maximum array index
  */
-void IsingModel::nextPermutation(std::vector<int> tvN, const int max) {
+void IsingModel::nextPermutation(std::vector<int>& tvN, const int max) {
+    //if(debug) std::cout<<"\tNextPermutation: "<<tvN.size()<<" "<<max<<std::endl;
+
     for(size_t i=0; i<tvN.size(); i++) {
-        if(tvN.at(i) < max) {
-            tvN.at(i)++;
+        if(i == tvN.size()-1) {
+            if(tvN.at(i) == max-1) tvN.at(0)=-1;
+            else tvN.at(i)+=1;
             return;
-        }
-        else if(i< tvN.size()-1) {
+        } else if(tvN.at(i) == max-1) {
             tvN.at(i)=0;
-        }
-        else if(i==tvN.size()-1) {
-            tvN.at(0)=-1;
+        } else {
+            tvN.at(i)=tvN.at(i)+1;
             return;
         }
     }
@@ -248,6 +262,8 @@ void IsingModel::addSpins(const int depth,
         const std::vector<double>& x0, 
         const std::vector<double>& x1) {
         
+    if(debug) std::cout<<"\taddSpins:"<<std::endl;
+
     double delta    = abs(x1.at(0)-x0.at(0));
     //double sliceLen = hausdorffScale * delta;
     //double spaceLen = (delta - sliceLen*hausdorffSlices)/(hausdorffSlices-1);
@@ -260,7 +276,7 @@ void IsingModel::addSpins(const int depth,
     // Loop over all valid positions for a spin hypercube
     for(std::fill(vN.begin(),vN.end(),0); 
         vN.at(0) != -1; 
-        nextPermutation(vN,hausdorffSlices-1)) {
+        nextPermutation(vN,hausdorffSlices)) {
         // Current position is lower corner of hypercube we produce 
         // (think in terms of the origin for the unit hypercube, [0,1]^p) 
         std::vector<double> cPos(latticeDimensions.size());
@@ -282,7 +298,7 @@ void IsingModel::addSpins(const int depth,
         std::vector<int> cubePoints(latticeDimensions.size());
         for(std::fill(cubePoints.begin(),cubePoints.end(),0);
             cubePoints.at(0) != -1;
-            nextPermutation(cubePoints,1)) {
+            nextPermutation(cubePoints,2)) {
            
             spin ts;
             ts.active=1;
@@ -304,12 +320,13 @@ void IsingModel::addSpins(const int depth,
  *    | Prepare the class object for simulation 
  */
 void IsingModel::setup() {
+    if(debug) std::cout<<"\tSETUP:"<<std::endl;
     
     // Calculate the lattice dimensions from the input
     // Hausdorff dimension
     // (See my notes for derivation)
     if(hausdorffMethod=="SCALING") {
-        hausdorffScale=pow(hausdorffSlices,-1/hausdorffDim);
+        hausdorffScale=exp(-ceil(hausdorffDim)*log(hausdorffSlices)/hausdorffDim);
     }
 
     // Check that the dimensions are reasonable
@@ -341,6 +358,7 @@ void IsingModel::setup() {
  *    | Run the Monte Carlo simulation (spin-flipping) 
  */
 void IsingModel::runMonteCarlo() {
+    if(debug) std::cout<<"\tRunMonteCarlo:"<<std::endl;
     if(!hasBeenSetup) {
         std::cout<<"ERROR: Object has not been setup!"<<std::endl;
         exit(EXIT_FAILURE); 
@@ -350,7 +368,7 @@ void IsingModel::runMonteCarlo() {
     TRandom3* rNG = new TRandom3(); 
 
     freeEnergy=getFreeEnergy();
-    std::vector<boost::thread*> threads;
+    //std::vector<boost::thread*> threads;
 
     // Start performing MC steps
     for(int i=0; i < nMCSteps; i++) {
@@ -367,7 +385,7 @@ void IsingModel::runMonteCarlo() {
             // Create a vector of spin indices
             int popVectorSize=nSpins;
             std::vector<int> popVector(nSpins);
-            for(int j=0; j < nSpins; j++) popVector.push_back(j);
+            for(int j=0; j < nSpins; j++) popVector.at(j)=j;
             
             // Loop through threads
             for(int iThread=0; iThread < nThreads; iThread++) {
@@ -375,26 +393,35 @@ void IsingModel::runMonteCarlo() {
                 // Generate array of spins to flip for thread
                 // by ripping apart vector of spin indices 
                 std::vector<int> spinFlips(nSpinsPerThread);
-                for(int j=0; j < nSpinsPerThread; ){ 
-                    int index=rNG->Integer(popVectorSize);
-                    spinFlips.push_back(popVector.at(index));
-                    popVector.erase(popVector.begin()+index);
-                    popVectorSize--;
+                if(popVectorSize==0) break;
+                else if(nSpinsPerThread > popVector.size()) {
+                    std::cout<<" "<<std::endl;
+                    spinFlips=popVector;
+                    popVector.clear();
+                }
+                else {
+                    for(int j=0; j < nSpinsPerThread; j++){ 
+                        int index=rNG->Integer(popVectorSize);
+                        spinFlips.push_back(popVector.at(index));
+                        popVector.erase(popVector.begin()+index);
+                        popVectorSize--;
+                    }
                 }
 
                 // Save thread info outside of scope
                 // and submit the thread
-                boost::thread * tThread
-                    = new boost::thread(&IsingModel::heatBathStep,this,rNG->Uniform(),spinFlips);
-                threads.push_back(tThread);
+                //boost::thread * tThread
+                //    = new boost::thread(&IsingModel::heatBathStep,this,rNG->Uniform(),spinFlips);
+                ///threads.push_back(tThread);
+                heatBathStep(rNG->Uniform(),spinFlips);
 
                 currentNThreads++;
             }
 
             // Let them run in sequence
-            for(int iThread; iThread<currentNThreads; iThread++) {
-                threads.at(iThread)->join();
-            }
+            //for(int iThread; iThread<currentNThreads; iThread++) {
+            //    //threads.at(iThread)->join();
+            //}
 
             freeEnergy = getFreeEnergy();
         }
@@ -463,12 +490,14 @@ void IsingModel::heatBathStep(double rng, std::vector<int> spinFlips) {
  *    | Perform one run over the lattice, given a group of spins 
  */
 void IsingModel::reset() {
+    if(debug) std::cout<<"\tReset:"<<std::endl;
     spinArray.clear();
     mcInfo.clear();
     latticeDimensions.clear();
 
     magnetization=0;
     freeEnergy=0;
+    nSpins=0;
 
     hasBeenSetup=false;
 }

@@ -1,7 +1,23 @@
 #include "IsingModel.cpp"
 #include "TFile.h"
+    
 
-int main(int argc, const char** args) {
+std::clock_t start = std::clock();
+double getTimeDelta() {
+    double value=(std::clock()-start)/1000000;
+    std::cout<<"\t\t- Done. It took "<<value<<" s"<<std::endl;
+    start = std::clock();
+    return value; 
+}
+
+bool niceAssert(TString statement, bool isTrue) {
+    std::cout<<statement.Data()<<": "
+             <<(isTrue ? "SUCCESS" : "FAILED")
+             <<std::endl;
+    return isTrue;
+}
+
+void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     std::cout<<"* HausdorffIsingModel: TEST                   *"<<std::endl;
     std::cout<<"*                                             *"<<std::endl;
@@ -16,13 +32,15 @@ int main(int argc, const char** args) {
     // Declare initial model, output files
     IsingModel model;
     TFile *fOut = new TFile("IsingModel_TestOutput.root","RECREATE");
-    std::clock_t start = std::clock();
 
     // Declare settings for 4D lattice check
-    std::cout<<"Constructing the 4D lattice"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
+    std::cout<<"* Constructing the 4D lattice                 *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
+    model.setDebug             (true);
     model.setNumThreads        (40);
     model.setNumMCSteps        (10);
-    model.setLatticeDepth      (2);
+    model.setLatticeDepth      (4);
     model.setHausdorffDimension(3.5);
     model.setHausdorffMethod   ("SCALING");
     model.setMCMethod          ("METROPOLIS");
@@ -30,38 +48,59 @@ int main(int argc, const char** args) {
     model.setTemperature       (0.001);
     model.setCouplingConsts    (1,1); 
     model.setup();
+        getTimeDelta();
+    //model.getFreeEnergy();
+        getTimeDelta();
+
+
+    std::cout<<"\nTESTS:"<<std::endl;
+    niceAssert("Number of spins is 2^p*n^(pd)",pow(2,ceil(model.getHausdorffDimension()))
+                                               *pow(model.getHausdorffSlices(),
+                                                  model.getLatticeDepth()*ceil(model.getHausdorffDimension()))
+                                                == model.getNumSpins());
+
     
-    std::cout<<"\t\t- Done. It took "<<(std::clock()-start)<<" ms"<<std::endl;
-    start = std::clock();
 
     // Prepare 1D system
-    std::cout<<"Preparing the 1D lattice"<<std::endl;
+    std::cout<<"\n\n***********************************************"<<std::endl;
+    std::cout<<"* Preparing the 1D lattice                    *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setHausdorffDimension(1);
     model.setup();
+        getTimeDelta();
     model.runMonteCarlo();
-    
-    std::cout<<"\t\t- Done. It took "<<(std::clock()-start)<<" ms"<<std::endl;
-    start = std::clock();
+        getTimeDelta();
+
+
+
 
     // Prepare 2D system
-    std::cout<<"Preparing the 2D lattice"<<std::endl;
+    std::cout<<"\n\n***********************************************"<<std::endl;
+    std::cout<<"* Preparing the 2D lattice                    *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setHausdorffDimension(2);
     model.setup();
+        getTimeDelta();
     model.runMonteCarlo();
+        getTimeDelta();
     
-    std::cout<<"\t\t- Done. It took "<<(std::clock()-start)<<" ms"<<std::endl;
-    start = std::clock();
+
+
+
 
     // Check 2D convergence for Heat Bath
     // and plot the change in Delta E
-    std::cout<<"Preparing the 2D lattice with Heat Bath"<<std::endl;
+    std::cout<<"\n\n***********************************************"<<std::endl;
+    std::cout<<"* Preparing the 2D lattice with Heat Bath     *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setMCMethod("HEATBATH");
-    
-    std::cout<<"\t\t- Done. It took "<<(std::clock()-start)<<" ms"<<std::endl;
-    start = std::clock();
+    model.setup();
+        getTimeDelta();
+    model.runMonteCarlo();
+        getTimeDelta();
 
     fOut->Close();
 

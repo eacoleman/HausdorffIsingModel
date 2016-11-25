@@ -8,7 +8,7 @@
  *  - Multithreaded Monte Carlo steps                                          *
  *                                                                             *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include <boost/thread/thread.hpp>
+//#include <boost/thread/thread.hpp>
 #include <cstdlib>
 #include <algorithm>
 #include <vector>
@@ -22,6 +22,7 @@ class IsingModel {
         virtual ~IsingModel();
         
         // Settings
+        void setDebug             (const bool dbg   ) {debug = dbg;}
         void setNumThreads        (const int num    );
         void setNumMCSteps        (const int num    );
         void setLatticeDepth      (const int num    );
@@ -78,6 +79,7 @@ class IsingModel {
         } spin;
         
         // Settings
+        bool   debug=false;
         std::vector<spin> spinArray;
         std::vector<int > latticeDimensions;
         int    latticeDepth=1;
@@ -106,7 +108,7 @@ class IsingModel {
         void   nnMetropolisStep();
         void   heatBathStep(double rng, std::vector<int> spinFlips);
         double getDistanceSq(const spin i1, const spin i2);
-        void   nextPermutation(std::vector<int> tvN, const int max);
+        void   nextPermutation(std::vector<int>& tvN, const int max);
         void   addSpins(const int depth, 
                         const std::vector<double>& x0, 
                         const std::vector<double>& x1);
