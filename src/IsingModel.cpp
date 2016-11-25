@@ -457,3 +457,18 @@ void IsingModel::heatBathStep(double rng, std::vector<int> spinFlips) {
 
     mcInfo.push_back(tE-freeEnergy);
 }
+
+
+/* (void) simpleMonteCarloStep 
+ *    | Perform one run over the lattice, given a group of spins 
+ */
+void IsingModel::reset() {
+    spinArray.clear();
+    mcInfo.clear();
+    latticeDimensions.clear();
+
+    magnetization=0;
+    freeEnergy=0;
+
+    hasBeenSetup=false;
+}

@@ -1,3 +1,5 @@
 *.[oa]
 *.so
 output/*
+testIsingModel
+runIsingModel

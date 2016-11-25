@@ -66,8 +66,8 @@ class IsingModel {
 
         // Simulation
         void setup();
+        void reset();
         void runMonteCarlo();
-        void heatBathStep(double rng, std::vector<int> spinFlips);
 
     private :
         // Spins
@@ -104,6 +104,7 @@ class IsingModel {
         bool   hasBeenSetup=false;
         double metropolisStep(const double rng);
         void   nnMetropolisStep();
+        void   heatBathStep(double rng, std::vector<int> spinFlips);
         double getDistanceSq(const spin i1, const spin i2);
         void   nextPermutation(std::vector<int> tvN, const int max);
         void   addSpins(const int depth, 
