@@ -348,26 +348,21 @@ void IsingModel::runMonteCarlo() {
     
     // Various utils 
     TRandom3* rNG = new TRandom3(); 
+
     freeEnergy=getFreeEnergy();
+    std::vector<boost::thread*> threads;
 
     // Start performing MC steps
     for(int i=0; i < nMCSteps; i++) {
-             if(mcMethod=="METROPOLIS")   freeEnergy = metropolisStep();
-        else if(mcMethod=="NNMETROPOLIS") freeEnergy = nnMetropolisStep();
+             if(mcMethod=="METROPOLIS")   
+                 freeEnergy = metropolisStep(rNG->Uniform());
+        else if(mcMethod=="NNMETROPOLIS") 
+                 nnMetropolisStep();
         else if(mcMethod=="HEATBATH") {
             
             // Prepare threads
             int currentNThreads=0;
             int nSpinsPerThread = floor(nSpins/nThreads);
-            std::vector<pthread_t>  threads(0);
-            std::vector<threadInfo> threadInfos(0);
-
-            // Prepare queue for single MC step so that loop is
-            // forced to halt before starting the next step
-            pthread_attr_t halter;
-            void* threadStatus;
-            pthread_attr_init(&halter);
-            pthread_attr_setdetachstate(&halter, PTHREAD_CREATE_JOINABLE);
             
             // Create a vector of spin indices
             int popVectorSize=nSpins;
@@ -376,41 +371,30 @@ void IsingModel::runMonteCarlo() {
             
             // Loop through threads
             for(int iThread=0; iThread < nThreads; iThread++) {
-                // Multithreading variables
-                pthread_t  tThread;
-                threadInfo tInfo;
 
                 // Generate array of spins to flip for thread
                 // by ripping apart vector of spin indices 
+                std::vector<int> spinFlips(nSpinsPerThread);
                 for(int j=0; j < nSpinsPerThread; ){ 
                     int index=rNG->Integer(popVectorSize);
-                    tInfo.spinFlips.push_back(popVector.at(index));
+                    spinFlips.push_back(popVector.at(index));
                     popVector.erase(popVector.begin()+index);
                     popVectorSize--;
                 }
 
                 // Save thread info outside of scope
+                // and submit the thread
+                boost::thread * tThread
+                    = new boost::thread(&IsingModel::heatBathStep,this,rNG->Uniform(),spinFlips);
                 threads.push_back(tThread);
-                threadInfos.push_back(tInfo);
 
-                // Submit the thread
-                pthread_create(&threads.at(currentNThreads),
-                               &halter,
-                               IsingModel::heatBathStep,
-                               (void *)&(threadInfos.at(currentNThreads)));
                 currentNThreads++;
             }
 
-            // Release the jobs for launch
-            pthread_attr_destroy(&halter);
-
             // Let them run in sequence
             for(int iThread; iThread<currentNThreads; iThread++) {
-                pthread_join(threads.at(iThread), &threadStatus);
+                threads.at(iThread)->join();
             }
-
-            // Make sure all threads are killed
-            pthread_exit(NULL);
 
             freeEnergy = getFreeEnergy();
         }
@@ -424,8 +408,7 @@ void IsingModel::runMonteCarlo() {
 /* (void) metropolisStep 
  *    | Perform one run over the lattice, attempting spin-flips 
  */
-double IsingModel::metropolisStep() {
-    static TRandom3* rNG = new TRandom3();
+double IsingModel::metropolisStep(const double rng) {
 
     // loop over spins
     double newE=0; 
@@ -434,7 +417,7 @@ double IsingModel::metropolisStep() {
         bool spinFlip=false;
 
         if(tE-freeEnergy<0) spinFlip = true;
-        else spinFlip = (rNG->Uniform() < exp((freeEnergy-tE)/kbT));
+        else spinFlip = (rng < exp((freeEnergy-tE)/kbT));
 
         if(spinFlip) {
             spinArray.at(i).S=-spinArray.at(i).S;
@@ -450,32 +433,27 @@ double IsingModel::metropolisStep() {
  *    | Perform one run over the lattice, attempting spin-flips 
  *    | SIMPLE: Nearest-neighbors only!
  */
-double IsingModel::nnMetropolisStep() {
+void IsingModel::nnMetropolisStep() {
     // TODO: Implement or remove
-    return 0;
 }
 
 
 /* (void) simpleMonteCarloStep 
  *    | Perform one run over the lattice, given a group of spins 
  */
-void* IsingModel::heatBathStep(void *threadArgs) {
-    static TRandom3* rNG = new TRandom3();
-    threadInfo *tInfo;
-    tInfo = (threadInfo*) threadArgs;
+void IsingModel::heatBathStep(double rng, std::vector<int> spinFlips) {
 
-    double tE = getFreeEnergy(tInfo->spinFlips);
+    double tE = getFreeEnergy(spinFlips);
     bool spinFlip=false;
 
     if(tE-freeEnergy<0) spinFlip=true;
-    else spinFlip = (rNG->Uniform() < exp((freeEnergy-tE)/kbT));
+    else spinFlip = (rng < exp((freeEnergy-tE)/kbT));
         
     if(spinFlip) {
-        for(size_t i=0; i<tInfo->spinFlips.size(); i++) {
+        for(size_t i=0; i<spinFlips.size(); i++) {
             spinArray.at(i).S=-spinArray.at(i).S;
         }
     }
 
     mcInfo.push_back(tE-freeEnergy);
-    pthread_exit(NULL);
 }
