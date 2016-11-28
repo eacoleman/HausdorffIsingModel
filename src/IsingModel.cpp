@@ -376,12 +376,13 @@ void IsingModel::runMonteCarlo() {
                  freeEnergy = metropolisStep(rNG->Uniform());
         else if(mcMethod=="NNMETROPOLIS") 
                  nnMetropolisStep();
-        else if(mcMethod=="HEATBATH") {
+        else if(mcMethod=="HEATBATH" || mcMethod=="HYBRID") {
             
             // Prepare threads
             int currentNThreads=0;
             int nSpinsPerThread = floor(nSpins/nThreads);
-            
+            double avgAbsDeltaE=-1;
+
             // Create a vector of spin indices
             int popVectorSize=nSpins;
             std::vector<int> popVector(nSpins);
@@ -389,6 +390,24 @@ void IsingModel::runMonteCarlo() {
             
             // Loop through threads
             for(int iThread=0; iThread < nThreads; iThread++) {
+                // HYBRID mode: 
+                if(mcMethod=="HYBRID") {
+                    double newAvgAbsDeltaE=0;
+                    for(int iDE=0,lMCI=mcInfo.size(); iDE < lMCI; iDE++) {
+                        newAvgAbsDeltaE+=abs(iDE/lMCI);
+                    }
+
+                    if(absAvgDeltaE > 0 && nSpinsPerThread > 1 
+                                        && newAvgAbsDeltaE > avgAbsDeltaE) {
+                        nSpinsPerThread /= 2;
+                        nSpinsPerThread=max(nSpinsPerThread,1);
+                        if(debug) std::cout<<"\t\tHYBRID: Increasing granularity to "
+                                           <<nSpinsPerThread<<std::endl;
+                    }
+
+                    avgAbsDeltaE=newAvgAbsDeltaE;
+                    mcInfo.clear();
+                }
 
                 // Generate array of spins to flip for thread
                 // by ripping apart vector of spin indices 
