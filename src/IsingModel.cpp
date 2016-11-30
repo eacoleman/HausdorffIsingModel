@@ -9,6 +9,7 @@
  *                                                                             *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "interface/IsingModel.h"
+#include <iomanip>
 
 // Constructors/destructors implemented simply
 // (because of number of options)
@@ -347,16 +348,6 @@ void IsingModel::addSpins(const int depth,
     if(debug) std::cout<<"\t\t- spinArray made, sorting..."<<std::endl;
     QuickSort(spinArray,0,nSpins-1);
 
-    for(int i=0; i < spinArray.size(); i++) {
-        std::cout<<"Spin "<<i<<": (";
-        for(int j=0; j < spinArray.at(i).coords.size(); j++) {
-            char temp[8];
-            sprintf(temp,"%1.6f",spinArray.at(i).coords.at(j));
-            std::cout<<temp<<", \t\t";
-        }
-        std::cout<<")"<<std::endl;
-    }
-
 }
 
 
@@ -635,7 +626,7 @@ void IsingModel::swap(spin* a, spin* b) {
 
     for (int j = low; j <= high - 1; j++)
     {
-        if (vec[j] <= pivot) {
+        if (!(vec[j] > pivot)) {
             i++;
             swap(&vec[i], &vec[j]);
         }

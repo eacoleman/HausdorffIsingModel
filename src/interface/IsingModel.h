@@ -85,24 +85,26 @@ class IsingModel {
            bool active;
            std::vector<double> coords;
            bool operator < (const spin& ts) const {
-                for(int iS=0; iS < coords.size(); iS++) 
-                    if(coords.at(iS) >= ts.coords.at(iS)) return false;
-                return true;
+                for(int iS=0; iS < coords.size(); iS++) {
+                    if(coords.at(iS) < ts.coords.at(iS)) return true;
+                    else if(coords.at(iS) > ts.coords.at(iS)) return false;
+                    else continue;
+                }
+                return false;
             }
            bool operator <= (const spin& ts) const {
-                for(int iS=0; iS < coords.size(); iS++) 
-                    if(coords.at(iS) > ts.coords.at(iS)) return false;
-                return true;
+                return !(*this > ts);
             }
            bool operator > (const spin& ts) const {
-                for(int iS=0; iS < coords.size(); iS++) 
-                    if(coords.at(iS) <= ts.coords.at(iS)) return false;
-                return true;
+                for(int iS=0; iS < coords.size(); iS++) {
+                    if(coords.at(iS) > ts.coords.at(iS)) return true;
+                    else if(coords.at(iS) < ts.coords.at(iS)) return false;
+                    else continue;
+                }
+                return false;
            }
            bool operator >= (const spin& ts) const {
-                for(int iS=0; iS < coords.size(); iS++) 
-                    if(coords.at(iS) < ts.coords.at(iS)) return false;
-                return true;
+                return !(*this < ts);
            }
         };
 
