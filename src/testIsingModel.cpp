@@ -1,5 +1,6 @@
 #include "IsingModel.cpp"
 #include "TFile.h"
+#include "TCanvas.h"
 #include "TGraph.h"
 #include "TMultiGraph.h"
     
@@ -42,8 +43,8 @@ void testIsingModel() {
     model.setDebug             (true);
     model.setNumThreads        (40);
     model.setNumMCSteps        (10);
-    model.setLatticeDepth      (4);
-    model.setHausdorffDimension(3.5);
+    model.setLatticeDepth      (2);
+    model.setHausdorffDimension(2.5);
     model.setHausdorffMethod   ("SCALING");
     model.setMCMethod          ("METROPOLIS");
     model.setInteractionSigma  (0);   
@@ -67,6 +68,7 @@ void testIsingModel() {
                                                       == model.getSpinArray().size());
 
     
+    exit(1);
 
     // Prepare 1D system
     std::cout<<"\n\n***********************************************"<<std::endl;
@@ -91,18 +93,24 @@ void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setHausdorffDimension(1.5);
-    model.setNumMCSteps(1);
+    model.setNumMCSteps(4);
+    model.setCouplingConsts(100,0);
+    model.setTemperature(0.001);
     model.setup();
+    model.randomizeSpins();
+    std::cout<<"\t\t- Magnetization: "<<model.getMagnetization()<<std::endl;
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
     model.status();
         getTimeDelta();
 
-    TGraph *metGr = (TGraph*) model.getConvergenceGr()->Clone("Metropolis");
-    metGr->SetTitle("Metropolis");
-    metGr->SetMarkerStyle(20);
-    metGr->SetMarkerColor(2);
+    TGraph *metConGr = (TGraph*) model.getConvergenceGr()->Clone("Metropolis");
+    metConGr->SetTitle("Metropolis");
+    metConGr->SetMarkerStyle(20);
+    metConGr->SetLineColor(2);
+    metConGr->SetFillStyle(0);
+    metConGr->SetMarkerColor(2);
 
 
 
@@ -114,6 +122,8 @@ void testIsingModel() {
     model.reset();
     model.setMCMethod("HEATBATH");
     model.setup();
+    model.randomizeSpins();
+    std::cout<<"\t\t- Magnetization: "<<model.getMagnetization()<<std::endl;
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
@@ -121,10 +131,12 @@ void testIsingModel() {
         getTimeDelta();
 
 
-    TGraph *hbtGr = (TGraph*) model.getConvergenceGr()->Clone("HeatBath");
-    hbtGr->SetTitle("Heat Bath");
-    hbtGr->SetMarkerStyle(20);
-    hbtGr->SetMarkerColor(4);
+    TGraph *hbtConGr = (TGraph*) model.getConvergenceGr()->Clone("HeatBath");
+    hbtConGr->SetTitle("Heat Bath");
+    hbtConGr->SetMarkerStyle(20);
+    hbtConGr->SetLineColor(4);
+    hbtConGr->SetFillStyle(0);
+    hbtConGr->SetMarkerColor(4);
 
 
 
@@ -137,29 +149,50 @@ void testIsingModel() {
     model.reset();
     model.setMCMethod("HYBRID");
     model.setup();
+    model.randomizeSpins();
+    std::cout<<"\t\t- Magnetization: "<<model.getMagnetization()<<std::endl;
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
     model.status();
         getTimeDelta();
 
-    TGraph *hrbGr = (TGraph*) model.getConvergenceGr()->Clone("Hybrid");
-    hrbGr->SetTitle("Hybrid");
-    hrbGr->SetMarkerStyle(20);
-    hrbGr->SetMarkerColor(6);
+    TGraph *hrbConGr = (TGraph*) model.getConvergenceGr()->Clone("Hybrid");
+    hrbConGr->SetTitle("Hybrid");
+    hrbConGr->SetMarkerStyle(20);
+    hrbConGr->SetLineColor(6);
+    hrbConGr->SetFillStyle(0);
+    hrbConGr->SetMarkerColor(6);
 
+
+
+
+    std::cout<<"\n\n***********************************************"<<std::endl;
+    std::cout<<"* Preparing validation plots                  *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
+
+    // Prepare drawing utils
+    TCanvas *C = new TCanvas("cnv","cnv",800,600);
+    C->cd();
 
     // Prepare convergence graph
     TMultiGraph* convergenceGr = new TMultiGraph();
     convergenceGr->SetName("ConvergenceGraph");
-    convergenceGr->Add(metGr);
-    convergenceGr->Add(hbtGr);
-    convergenceGr->Add(hrbGr);
+    convergenceGr->SetTitle("Convergence of MC Minimization");
+    convergenceGr->Add(metConGr);
+    convergenceGr->Add(hbtConGr);
+    convergenceGr->Add(hrbConGr);
+    convergenceGr->Draw("APL");
+    metConGr->GetXaxis()->SetTitle("Monte Carlo step");
+    metConGr->GetYaxis()->SetTitle("Delta F");
+    gPad->Modified();
+
+    C->SetLogy();
+    C->BuildLegend();
+    C->SaveAs("ConvergenceGr.pdf");
 
 
-    //convergenceGr->GetXaxis()->SetTitle("Monte Carlo step");
-    //convergenceGr->GetYaxis()->SetTitle("#Delta F");
-
+    
 
     fOut->cd();
     convergenceGr->Write();
