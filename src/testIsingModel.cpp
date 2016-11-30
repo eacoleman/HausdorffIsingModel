@@ -1,10 +1,12 @@
 #include "IsingModel.cpp"
 #include "TFile.h"
+#include "TGraph.h"
+#include "TMultiGraph.h"
     
 
 std::clock_t start = std::clock();
 double getTimeDelta() {
-    double value=(std::clock()-start)/1000000;
+    double value=((float) std::clock()-start)/1000000;
     std::cout<<"\t\t- Done. It took "<<value<<" s"<<std::endl;
     start = std::clock();
     return value; 
@@ -51,13 +53,18 @@ void testIsingModel() {
         getTimeDelta();
     //model.getFreeEnergy();
         getTimeDelta();
+    model.status();
+        getTimeDelta();
 
 
     std::cout<<"\nTESTS:"<<std::endl;
     niceAssert("Number of spins is 2^p*n^(pd)",pow(2,ceil(model.getHausdorffDimension()))
                                                *pow(model.getHausdorffSlices(),
-                                                  model.getLatticeDepth()*ceil(model.getHausdorffDimension()))
+                                                    model.getLatticeDepth()
+                                                    *ceil(model.getHausdorffDimension()))
                                                 == model.getNumSpins());
+    niceAssert("Model magnetization is +1 * nSpins", model.getMagnetization()
+                                                      == model.getSpinArray().size());
 
     
 
@@ -71,6 +78,9 @@ void testIsingModel() {
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
+    model.status();
+        getTimeDelta();
+
 
 
 
@@ -80,13 +90,19 @@ void testIsingModel() {
     std::cout<<"* Preparing the 2D lattice                    *"<<std::endl;
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
-    model.setHausdorffDimension(2);
+    model.setHausdorffDimension(1.5);
+    model.setNumMCSteps(1);
     model.setup();
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
-    
+    model.status();
+        getTimeDelta();
 
+    TGraph *metGr = (TGraph*) model.getConvergenceGr()->Clone("Metropolis");
+    metGr->SetTitle("Metropolis");
+    metGr->SetMarkerStyle(20);
+    metGr->SetMarkerColor(2);
 
 
 
@@ -101,6 +117,53 @@ void testIsingModel() {
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
+    model.status();
+        getTimeDelta();
+
+
+    TGraph *hbtGr = (TGraph*) model.getConvergenceGr()->Clone("HeatBath");
+    hbtGr->SetTitle("Heat Bath");
+    hbtGr->SetMarkerStyle(20);
+    hbtGr->SetMarkerColor(4);
+
+
+
+
+    // Check 2D convergence for Hybrid
+    // and plot the change in Delta E
+    std::cout<<"\n\n***********************************************"<<std::endl;
+    std::cout<<"* Preparing the 2D lattice with Hybrid Mode   *"<<std::endl;
+    std::cout<<"***********************************************"<<std::endl;
+    model.reset();
+    model.setMCMethod("HYBRID");
+    model.setup();
+        getTimeDelta();
+    model.runMonteCarlo();
+        getTimeDelta();
+    model.status();
+        getTimeDelta();
+
+    TGraph *hrbGr = (TGraph*) model.getConvergenceGr()->Clone("Hybrid");
+    hrbGr->SetTitle("Hybrid");
+    hrbGr->SetMarkerStyle(20);
+    hrbGr->SetMarkerColor(6);
+
+
+    // Prepare convergence graph
+    TMultiGraph* convergenceGr = new TMultiGraph();
+    convergenceGr->SetName("ConvergenceGraph");
+    convergenceGr->Add(metGr);
+    convergenceGr->Add(hbtGr);
+    convergenceGr->Add(hrbGr);
+
+
+    //convergenceGr->GetXaxis()->SetTitle("Monte Carlo step");
+    //convergenceGr->GetYaxis()->SetTitle("#Delta F");
+
+
+    fOut->cd();
+    convergenceGr->Write();
+
 
     fOut->Close();
 

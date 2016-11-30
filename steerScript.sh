@@ -46,7 +46,7 @@ make test
 TEST )
 echo "Testing the simulation code:"
 
-root -l -q src/testIsingModel.cpp 
+root -l -b -q src/testIsingModel.cpp 
 
 ;;
 

@@ -14,6 +14,8 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include "TRandom3.h"
+#include "TGraph.h"
 
 class IsingModel {
     public :
@@ -49,6 +51,7 @@ class IsingModel {
         const double getInteractionSigma()   {return interactionSigma;}   
         const double getNumMCSteps()         {return nMCSteps        ;}
         const std::vector<double> getMCInfo(){return mcInfo          ;}
+        const std::vector<double> getHybridInfo(){return hybridInfo  ;}
         
         // Observables
         const int    getMagnetization();
@@ -68,15 +71,42 @@ class IsingModel {
         // Simulation
         void setup();
         void reset();
+        void status();
         void runMonteCarlo();
+        void randomizeSpins();
+
+        // Plots
+        TGraph* getConvergenceGr();
 
     private :
         // Spins
-        typedef struct {
+        struct spin {
            int S;
            bool active;
            std::vector<double> coords;
-        } spin;
+           bool operator < (const spin& ts) const {
+                for(int iS=0; iS < coords.size(); iS++) 
+                    if(coords.at(iS) < ts.coords.at(iS)) return false;
+                return true;
+            }
+           bool operator <= (const spin& ts) const {
+                for(int iS=0; iS < coords.size(); iS++) 
+                    if(coords.at(iS) <= ts.coords.at(iS)) return false;
+                return true;
+            }
+           bool operator > (const spin& ts) const {
+                for(int iS=0; iS < coords.size(); iS++) 
+                    if(coords.at(iS) > ts.coords.at(iS)) return false;
+                return true;
+           }
+           bool operator >= (const spin& ts) const {
+                for(int iS=0; iS < coords.size(); iS++) 
+                    if(coords.at(iS) >= ts.coords.at(iS)) return false;
+                return true;
+           }
+        };
+
+        typedef struct spin spin;
         
         // Settings
         bool   debug=false;
@@ -104,14 +134,19 @@ class IsingModel {
         
         // Simulation
         bool   hasBeenSetup=false;
-        double metropolisStep(const double rng);
-        void   nnMetropolisStep();
-        void   heatBathStep(double rng, std::vector<int> spinFlips);
+        double metropolisStep(TRandom3* rNG);
+        double heatBathStep(TRandom3* rNG);
+        void   hybridStep(const double rng, const std::vector<int>& spinFlips);
         double getDistanceSq(const spin i1, const spin i2);
         void   nextPermutation(std::vector<int>& tvN, const int max);
         void   addSpins(const int depth, 
                         const std::vector<double>& x0, 
                         const std::vector<double>& x1);
         std::vector<double> mcInfo;
+        std::vector<double> hybridInfo;
          
+        // C++ utils
+        void swap(spin *a, spin *b);
+        void QuickSort(std::vector<spin>& vec, int left, int right);
+        int QSPartition(std::vector<spin>& vec, int left, int right);
 };
