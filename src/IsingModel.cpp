@@ -173,7 +173,7 @@ const double IsingModel::getFreeEnergy(const int flip) {
 
 
 /* (double) getFreeEnergy 
- *    | Get the free energy of the system (no multithread)
+ *    | Get the free energy of the system (beta*Hamiltonian) (no multithread)
  *  I | (vector<int> (default: empty)) array of spin indices to flip 
  */
 const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
@@ -181,10 +181,10 @@ const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
     for(int i=0; i<nSpins; i++) {
         spin s=spinArray.at(i);
         if (!s.active) continue;
-        bool spinFlip=
-            (std::find(flips.begin(),flips.end(),i)!=flips.end() ? -1 : 1); 
+        int spinFlip=
+            (std::find(flips.begin(),flips.end(),i)!=flips.end() ? -1 : 1);
 
-        energy += h()*s.S*spinFlip;
+        energy -= h()*s.S*spinFlip;
 
         // Nearest neighbor sum, no circular boundary conditions
         for(int j=0; j < latticeDimensions.size(); j++) {
@@ -194,10 +194,10 @@ const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
                 int newIndex=i-indexPM;
                 if(spinArray.at(newIndex).active) {
             
-                    bool tspinFlip=
+                    int tspinFlip=
                         (std::find(flips.begin(),flips.end(),newIndex)!=flips.end() ? -1 : 1); 
     
-                    energy += K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
+                    energy -= K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
                               *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip;
 
                 }
@@ -207,10 +207,10 @@ const double IsingModel::getFreeEnergy(const std::vector<int>& flips) {
                 int newIndex=i+indexPM;
                 if(!spinArray.at(newIndex).active) {
             
-                    bool tspinFlip=
+                    int tspinFlip=
                         (std::find(flips.begin(),flips.end(),newIndex)!=flips.end() ? -1 : 1); 
     
-                    energy += K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
+                    energy -= K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
                               *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip;
 
                 }
@@ -335,15 +335,6 @@ void IsingModel::addSpins(const int depth,
             nSpins++;
         } 
     }
-/*
-    for(int i=0; i < spinArray.size(); i++) {
-        std::cout<<"Spin "<<i<<": (";
-        for(int j=0; j < spinArray.at(i).coords.size(); j++) {
-            std::cout<<spinArray.at(i).coords.at(j)<<", ";
-        }
-        std::cout<<")"<<std::endl;
-    }
-*/
 
     if(debug) std::cout<<"\t\t- spinArray made, sorting..."<<std::endl;
     QuickSort(spinArray,0,nSpins-1);
@@ -369,10 +360,11 @@ void IsingModel::setup() {
         std::cout<<"ERROR: Invalid Hausdorff scaling"<<std::endl;
         exit(EXIT_FAILURE); 
     }
-    
+
+    //FIXME
     // Keep track of the number of site coordinates along each axis
     for(int i=0; i<ceil(hausdorffDim); i++) {
-        latticeDimensions.push_back(0);
+        latticeDimensions.push_back(2*pow(hausdorffSlices,latticeDepth));
     }
 
     // Generate the lattice array
@@ -417,14 +409,14 @@ void IsingModel::runMonteCarlo() {
              newAvgAbsDeltaE+=abs(mcInfo.at(iDE));
         mcInfo.clear();
 
-        std::cout<<" - "<<newAvgAbsDeltaE<<" "<<avgAbsDeltaE<<std::endl;
+        //std::cout<<" - "<<newAvgAbsDeltaE<<" "<<avgAbsDeltaE<<std::endl;
 
              if(mcMethod=="METROPOLIS") metropolisStep(rNG);
         else if(mcMethod=="HEATBATH")   heatBathStep(rNG);
         else if(mcMethod=="HYBRID") {
             
             // Prepare threads
-            int currentNThreads=0;
+            //int currentNThreads=0;
 
             // Create a vector of spin indices
             int popVectorSize=nSpins;
@@ -472,7 +464,7 @@ void IsingModel::runMonteCarlo() {
                 ///threads.push_back(tThread);
                 hybridStep(rNG->Uniform(),spinFlips);
 
-                currentNThreads++;
+                //currentNThreads++;
             }
 
             // Let them run in sequence
@@ -504,7 +496,7 @@ double IsingModel::metropolisStep(TRandom3* rNG) {
         //std::cout<<"\t\t\t-F= "<<freeEnergy<<", vs temp: "<<tE<<std::endl;
 
         if(tE-freeEnergy<0) spinFlip = true;
-        //else spinFlip = (rNG->Uniform() < exp((freeEnergy-tE)));
+        else spinFlip = (rNG->Uniform() < exp(freeEnergy-tE));
 
         if(spinFlip) {
             spinArray.at(i).S=-spinArray.at(i).S;
@@ -528,9 +520,15 @@ double IsingModel::heatBathStep(TRandom3* rNG) {
 
         //std::cout<<"\t\t\t-F= "<<freeEnergy<<", vs temp: "<<tE<<std::endl;
 
-        double acceptance = exp(tE-freeEnergy)/
-                               (exp(tE-freeEnergy)+exp(freeEnergy-tE));
-        bool spinFlip = (rNG->Uniform() < acceptance);
+        bool spinFlip=false;
+        double acceptance = exp(freeEnergy-tE);
+
+        if(std::isinf(acceptance)) {
+            spinFlip=true;
+        } else if(acceptance > 0) {
+            acceptance/=(exp(tE-freeEnergy)+exp(freeEnergy-tE));
+            spinFlip = (rNG->Uniform() < acceptance);
+        }
 
         if(spinFlip) {
             spinArray.at(i).S=-spinArray.at(i).S;
@@ -550,12 +548,12 @@ void IsingModel::hybridStep(const double rng, const std::vector<int>& spinFlips)
 
     //std::cout<<"\t\t\t-F= "<<freeEnergy<<", vs temp: "<<tE<<" from "<<spinFlips.size()<<std::endl;
 
-    if(tE-freeEnergy<0) spinFlip=true;
-    else spinFlip = (rng < exp((freeEnergy-tE)/kbT));
+    if(freeEnergy-tE<0) spinFlip=true;
+    else spinFlip = (rng < exp(freeEnergy-tE));
         
     if(spinFlip) {
         for(size_t i=0; i<spinFlips.size(); i++) {
-            spinArray.at(i).S=-spinArray.at(i).S;
+            spinArray.at(spinFlips.at(i)).S=-spinArray.at(spinFlips.at(i)).S;
         }
         freeEnergy=tE;
     }
@@ -596,7 +594,7 @@ void IsingModel::status() {
     std::cout<<"\t\t| Number MC steps: "<<getNumMCSteps()        <<std::endl;
     std::cout<<"\t\t| Number threads:  "<<getNumThreads()        <<std::endl;
     std::cout<<"\t\t|                  "<<getNumThreads()        <<std::endl;
-    std::cout<<"\t\t| Beta * Hamiltonian: "<<"1/"<<kbT<<" * "    <<std::endl;
+    std::cout<<"\t\t| Beta * Hamiltonian: "<<"-1/"<<kbT<<" * "    <<std::endl;
     std::cout<<"\t\t|                     "<<"("<<J<<"/|r_i-r_j|^"
                                            <<getInteractionSigma()<<" * S_i*S_j"<<std::endl;
     std::cout<<"\t\t|                     "<<" + "<<H<<"*S_i)"<<std::endl;
@@ -677,6 +675,17 @@ void IsingModel::randomizeSpins() {
 }
 
 
+/* (void) setAllSpins
+ *    | Sets all spins in one direction
+ *  I | (int) direction (+1 or -1) to set the spins
+ */
+void IsingModel::setAllSpins(const int direction) {
+    int allSpin = (direction > 0) ? 1: -1;
+    for(int i=0; i<spinArray.size(); i++) {
+        spinArray.at(i).S=allSpin;
+    }
+}
+
 /* (TGraph*) getConvergenceGr
  *    | Get a graph of the convergence statistics for the MC passes
  */
@@ -694,3 +703,4 @@ TGraph* IsingModel::getConvergenceGr() {
                      convergenceDt.data());
     return convergenceGr;
 }
+

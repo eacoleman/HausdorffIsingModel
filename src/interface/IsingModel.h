@@ -74,6 +74,7 @@ class IsingModel {
         void status();
         void runMonteCarlo();
         void randomizeSpins();
+        void setAllSpins(const int direction=1);
 
         // Plots
         TGraph* getConvergenceGr();

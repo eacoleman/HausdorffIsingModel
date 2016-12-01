@@ -43,13 +43,13 @@ void testIsingModel() {
     model.setDebug             (true);
     model.setNumThreads        (40);
     model.setNumMCSteps        (10);
-    model.setLatticeDepth      (2);
+    model.setLatticeDepth      (4);
     model.setHausdorffDimension(2.5);
     model.setHausdorffMethod   ("SCALING");
     model.setMCMethod          ("METROPOLIS");
     model.setInteractionSigma  (0);   
     model.setTemperature       (0.001);
-    model.setCouplingConsts    (1,1); 
+    model.setCouplingConsts    (1,1); /*
     model.setup();
         getTimeDelta();
     //model.getFreeEnergy();
@@ -65,11 +65,9 @@ void testIsingModel() {
                                                     *ceil(model.getHausdorffDimension()))
                                                 == model.getNumSpins());
     niceAssert("Model magnetization is +1 * nSpins", model.getMagnetization()
-                                                      == model.getSpinArray().size());
+                                                      == model.getSpinArray().size());*/
 
-    
-    exit(1);
-
+/*
     // Prepare 1D system
     std::cout<<"\n\n***********************************************"<<std::endl;
     std::cout<<"* Preparing the 1D lattice                    *"<<std::endl;
@@ -82,7 +80,7 @@ void testIsingModel() {
         getTimeDelta();
     model.status();
         getTimeDelta();
-
+*/
 
 
 
@@ -93,7 +91,7 @@ void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setHausdorffDimension(1.5);
-    model.setNumMCSteps(4);
+    model.setNumMCSteps(2);
     model.setCouplingConsts(100,0);
     model.setTemperature(0.001);
     model.setup();
@@ -148,8 +146,9 @@ void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setMCMethod("HYBRID");
+    model.setNumMCSteps(10000);
     model.setup();
-    model.randomizeSpins();
+    model.setAllSpins(-1);
     std::cout<<"\t\t- Magnetization: "<<model.getMagnetization()<<std::endl;
         getTimeDelta();
     model.runMonteCarlo();
@@ -163,7 +162,6 @@ void testIsingModel() {
     hrbConGr->SetLineColor(6);
     hrbConGr->SetFillStyle(0);
     hrbConGr->SetMarkerColor(6);
-
 
 
 
