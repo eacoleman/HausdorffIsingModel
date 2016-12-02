@@ -55,9 +55,8 @@ class IsingModel {
         
         // Observables
         const int    getMagnetization();
-        const double getFreeEnergy(
-                const std::vector<int>& flips=std::vector<int>());
-        const double getFreeEnergy(const int flip);
+        const double getEffHamiltonian(const std::vector<int>& flips=std::vector<int>());
+        const double getEffHamiltonian(const int flip);
         const double computePartitionFunction(
                 const int start=0,
                 const std::vector<int>& flips=std::vector<int>());
@@ -136,6 +135,8 @@ class IsingModel {
         int magnetization = 0;
         
         // Simulation
+        double xmax=1; // Necessary for nearest-neighbor sum
+        double xmin=0; // Same as above, see getEffHamiltonian definition
         bool   hasBeenSetup=false;
         double metropolisStep(TRandom3* rNG);
         double heatBathStep(TRandom3* rNG);

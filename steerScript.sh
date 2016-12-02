@@ -87,7 +87,11 @@ runIsingModel $2 $3 $4 $5 $6 $7 $8
 WWW )
 echo "Sending plots to CERNWEB"
 
-scp -r output/* ecoleman@lxplus.cern.ch:~/www/HausdorffIsingModel
+mkdir -p output/LatticeTests/
+cd output/
+
+tar -czvf output.tar.gz *
+scp output.tar.gz ecoleman@lxplus.cern.ch:~/www/HausdorffIsingModel/
 
 ;;
 esac

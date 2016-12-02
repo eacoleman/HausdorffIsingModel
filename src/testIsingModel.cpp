@@ -27,7 +27,6 @@ void testIsingModel() {
     std::cout<<"* Runs the following tests on the Ising model *"<<std::endl;
     std::cout<<"* class:                                      *"<<std::endl;
     std::cout<<"*       - 4D lattice has correct form         *"<<std::endl;
-    std::cout<<"*       - Known 1D, 2D exact solutions work   *"<<std::endl;
     std::cout<<"*       - Heat bath algorithm converges       *"<<std::endl;
     std::cout<<"*         (faster than Metropolis algorithm)  *"<<std::endl;
     std::cout<<"***********************************************"<<std::endl;
@@ -52,7 +51,7 @@ void testIsingModel() {
     model.setCouplingConsts    (1,1); /*
     model.setup();
         getTimeDelta();
-    //model.getFreeEnergy();
+    //model.getEffHamiltonian();
         getTimeDelta();
     model.status();
         getTimeDelta();
@@ -91,8 +90,8 @@ void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setHausdorffDimension(1.5);
-    model.setNumMCSteps(2);
-    model.setCouplingConsts(100,0);
+    model.setNumMCSteps(100);
+    model.setCouplingConsts(1,-100);
     model.setTemperature(0.001);
     model.setup();
     model.randomizeSpins();
@@ -146,9 +145,9 @@ void testIsingModel() {
     std::cout<<"***********************************************"<<std::endl;
     model.reset();
     model.setMCMethod("HYBRID");
-    model.setNumMCSteps(10000);
+    model.setNumMCSteps(100);
     model.setup();
-    model.setAllSpins(-1);
+    model.randomizeSpins();
     std::cout<<"\t\t- Magnetization: "<<model.getMagnetization()<<std::endl;
         getTimeDelta();
     model.runMonteCarlo();
@@ -181,13 +180,16 @@ void testIsingModel() {
     convergenceGr->Add(hbtConGr);
     convergenceGr->Add(hrbConGr);
     convergenceGr->Draw("APL");
-    metConGr->GetXaxis()->SetTitle("Monte Carlo step");
-    metConGr->GetYaxis()->SetTitle("Delta F");
+    gPad->Update();
+    convergenceGr->GetXaxis()->SetTitle("Monte Carlo step");
+    convergenceGr->GetYaxis()->SetTitle("#Sigma|#Delta(#betaH)|");
+    convergenceGr->GetYaxis()->SetTitleOffset(1.5);
     gPad->Modified();
 
-    C->SetLogy();
+    //C->SetLogy();
     C->BuildLegend();
     C->SaveAs("ConvergenceGr.pdf");
+    C->SaveAs("ConvergenceGr.png");
 
 
     
