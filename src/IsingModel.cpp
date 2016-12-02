@@ -171,7 +171,7 @@ double IsingModel::getDistanceSq(spin s1, spin s2) {
 
 
 /* (double) getEffHamiltonian 
- *    | Get the free energy of the system (no multithread)
+ *    | Get the effective energy of the system state (no multithread)
  *  I | (int) single spin to flip 
  */
 const double IsingModel::getEffHamiltonian(const int flip) {
@@ -182,11 +182,10 @@ const double IsingModel::getEffHamiltonian(const int flip) {
 
 
 /* (double) getEffHamiltonian 
- *    | Get the free energy of the system -(beta*Hamiltonian) (no multithread)
+ *    | Get the effective energy of the system state, -(beta*Hamiltonian) (no multithread)
  *  I | (vector<int> (default: empty)) array of spin indices to flip 
  */
 const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
-    static int lol=-100;
     double energy=0;
     for(int i=0; i<nSpins; i++) {
         spin s=spinArray.at(i);
@@ -195,14 +194,6 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
             (std::find(flips.begin(),flips.end(),i)!=flips.end() ? -1 : 1);
 
         energy -= h()*s.S*spinFlip;
-/*
-        if(lol>=0 && lol < 10) {
-            std::cout<<"S: (";
-            for(int k=0; k < s.coords.size(); k++) {
-                std::cout<<std::setw(10)<<s.coords.at(k)<<", ";
-            }
-            std::cout<<")"<<std::endl;
-        }*/
 
         // Nearest neighbor sum, no circular boundary conditions
         for(int j=0,p=latticeDimensions.size(); j < p; j++) {
@@ -210,14 +201,6 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
             
             if(i > indexPM && s.coords.at(j) != xmin && spinArray.at(i-indexPM).coords.at(j) != xmax) {
                 int newIndex=i-indexPM;
-/*
-                if(lol>=0 && lol < 10) {
-                    std::cout<<j<<": (";
-                    for(int k=0; k < spinArray.at(newIndex).coords.size(); k++) {
-                        std::cout<<std::setw(10)<<spinArray.at(newIndex).coords.at(k)<<", ";
-                    }
-                    std::cout<<")"<<std::endl;
-                }*/
 
                 if(spinArray.at(newIndex).active) {
 
@@ -232,14 +215,6 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
 
             if (i + indexPM < nSpins && s.coords.at(j) != xmax && spinArray.at(i+indexPM).coords.at(j) != xmin) {
                 int newIndex=i+indexPM;
-/*
-                if(lol>=0 && lol < 10) {
-                    std::cout<<j<<": (";
-                    for(int k=0; k < spinArray.at(newIndex).coords.size(); k++) {
-                        std::cout<<std::setw(10)<<spinArray.at(newIndex).coords.at(k)<<", ";
-                    }
-                    std::cout<<")"<<std::endl;
-                }*/
 
                 if(spinArray.at(newIndex).active) {
             
@@ -254,7 +229,6 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
 
         }
     }
-    lol++;
     return energy;
 }
 
@@ -441,7 +415,7 @@ void IsingModel::runMonteCarlo() {
     // Various utils 
     TRandom3* rNG = new TRandom3(); 
 
-    freeEnergy=getEffHamiltonian();
+    currentEffH=getEffHamiltonian();
     double avgAbsDeltaE=-1;
     int nSpinsPerThread = floor(nSpins/nThreads);
     int cNumThreads=nThreads;
@@ -549,19 +523,19 @@ double IsingModel::metropolisStep(TRandom3* rNG) {
         double tE = getEffHamiltonian(i);
         bool spinFlip=false;
 
-        //std::cout<<"\t\t\t-F= "<<freeEnergy<<", vs temp: "<<tE<<std::endl;
+        //std::cout<<"\t\t\t-F= "<<currentEffH<<", vs temp: "<<tE<<std::endl;
 
-        if(tE-freeEnergy<0) spinFlip = true;
-        else spinFlip = (rNG->Uniform() < exp(freeEnergy-tE));
+        if(tE-currentEffH<0) spinFlip = true;
+        else spinFlip = (rNG->Uniform() < exp(currentEffH-tE));
 
         if(spinFlip) {
             spinArray.at(i).S=-spinArray.at(i).S;
-            mcInfo.push_back(abs(tE-freeEnergy));            
-            freeEnergy=tE;
+            mcInfo.push_back(abs(tE-currentEffH));            
+            currentEffH=tE;
         }
     }
 
-    return freeEnergy;
+    return currentEffH;
 }
 
 
@@ -575,27 +549,27 @@ double IsingModel::heatBathStep(TRandom3* rNG) {
     for(int i=0; i < nSpins; i++) {
         double tE = getEffHamiltonian(i);
 
-        //std::cout<<"\t\t\t-F= "<<freeEnergy<<", vs temp: "<<tE<<std::endl;
+        //std::cout<<"\t\t\t-F= "<<currentEffH<<", vs temp: "<<tE<<std::endl;
 
         bool spinFlip=false;
-        double acceptance = exp(freeEnergy-tE);
+        double acceptance = exp(currentEffH-tE);
 
         if(std::isinf(acceptance)) {
             spinFlip=true;
         } else if(acceptance > 0) {
-            acceptance/=(exp(tE-freeEnergy)+exp(freeEnergy-tE));
+            acceptance/=(exp(tE-currentEffH)+exp(currentEffH-tE));
             spinFlip = (rNG->Uniform() < acceptance);
         }
 
         if(spinFlip) {
             spinArray.at(i).S=-spinArray.at(i).S;
-            mcInfo.push_back(abs(tE-freeEnergy));
-            freeEnergy=tE;
+            mcInfo.push_back(abs(tE-currentEffH));
+            currentEffH=tE;
         }
     }
 
 
-    return freeEnergy;
+    return currentEffH;
 }
 
 /* (void) hybridStep 
@@ -608,15 +582,15 @@ void IsingModel::hybridStep(const double rng, const std::vector<int>& spinFlips)
     double tE = getEffHamiltonian(spinFlips);
     bool spinFlip=false;
 
-    if(tE-freeEnergy<0) spinFlip=true;
-    else spinFlip = (rng < exp(freeEnergy-tE));
+    if(tE-currentEffH<0) spinFlip=true;
+    else spinFlip = (rng < exp(currentEffH-tE));
         
     if(spinFlip) {
         for(size_t i=0; i<spinFlips.size(); i++) {
             spinArray.at(spinFlips.at(i)).S=-spinArray.at(spinFlips.at(i)).S;
         }
-        mcInfo.push_back(abs(tE-freeEnergy));
-        freeEnergy=tE;
+        mcInfo.push_back(abs(tE-currentEffH));
+        currentEffH=tE;
     }
 
 }
@@ -633,7 +607,7 @@ void IsingModel::reset() {
     latticeDimensions.clear();
 
     magnetization=0;
-    freeEnergy=0;
+    currentEffH=0;
     nSpins=0;
 
     hasBeenSetup=false;
@@ -645,7 +619,7 @@ void IsingModel::reset() {
  */
 void IsingModel::status() {
     std::cout<<"\t\t| Magnetization:   "<<getMagnetization()     <<std::endl;
-    std::cout<<"\t\t| Free energy:     "<<getEffHamiltonian()        <<std::endl;
+    std::cout<<"\t\t| Eff. energy:     "<<getEffHamiltonian()        <<std::endl;
     std::cout<<"\t\t| Hausdorff dim.:  "<<getHausdorffDimension()<<std::endl;
     std::cout<<"\t\t| Lattice copies:  "<<getHausdorffSlices()   <<std::endl;
     std::cout<<"\t\t| Lattice scaling: "<<getHausdorffScale()    <<std::endl;

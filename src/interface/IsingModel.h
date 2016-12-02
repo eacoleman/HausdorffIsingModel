@@ -129,7 +129,7 @@ class IsingModel {
         double kbT=1;
         double H=1;
         double J=1;
-        double freeEnergy=0;
+        double currentEffH=0;
 
         // Observables
         int magnetization = 0;

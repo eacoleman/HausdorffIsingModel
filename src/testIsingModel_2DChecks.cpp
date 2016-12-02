@@ -60,7 +60,7 @@ void testIsingModel_2DChecks() {
     std::vector<double> hausdorffDims;
     std::vector<double> temps;
     std::vector<double> magnetizations;
-    std::vector<double> freeEnergies;
+    std::vector<double> energies;
 
     for(double i=1.25; i < 1.75; i += 0.2) {
         model.setHausdorffDimension(i);
@@ -69,7 +69,7 @@ void testIsingModel_2DChecks() {
             model.setTemperature(j);
             
             double mag=0;
-            double freeEn=0;
+            double en=0;
             for(int k=0; k < 3; k++) {
                 model.reset();
                 model.setup();
@@ -77,13 +77,13 @@ void testIsingModel_2DChecks() {
                 model.runMonteCarlo();
 
                 mag+=model.getMagnetization()/3;
-                freeEn+=model.getEffHamiltonian()/3;
+                en+=model.getEffHamiltonian()/3;
             }
 
             hausdorffDims.push_back(i);
             temps.push_back(j);
             magnetizations.push_back(mag);
-            freeEnergies.push_back(freeEn);
+            energies.push_back(en);
         }
     }
 
@@ -113,31 +113,31 @@ void testIsingModel_2DChecks() {
     gPad->Modified();
     gPad->SaveAs("2DCheck_MagGraph_F2.pdf");
 
-    // Prepare free energy graph
-    TGraph2D *freeGraph = new TGraph2D();
+    // Prepare energy graph
+    TGraph2D *energyGraph = new TGraph2D();
     for(int i=0; i < hausdorffDims.size(); i++) {
-        freeGraph->SetPoint(i,hausdorffDims.at(i),temps.at(i),freeEnergies.at(i));
+        energyGraph->SetPoint(i,hausdorffDims.at(i),temps.at(i),energies.at(i));
     }
 
     gStyle->SetPalette(1);
-    freeGraph->SetTitle("#beta H: #sigma = 0, J = 1");
-    freeGraph->Draw("SURF1");
+    energyGraph->SetTitle("#beta H: #sigma = 0, J = 1");
+    energyGraph->Draw("SURF1");
     gPad->Update();
-    freeGraph->GetXaxis()->SetTitle("Hausdorff dimension");
-    freeGraph->GetYaxis()->SetTitle("Temperature (k_{B}T)");
-    freeGraph->GetZaxis()->SetTitle("#beta H");
-    freeGraph->GetXaxis()->SetTitleOffset(1.5);
-    freeGraph->GetYaxis()->SetTitleOffset(2.2);
-    freeGraph->GetZaxis()->SetTitleOffset(1.5);
+    energyGraph->GetXaxis()->SetTitle("Hausdorff dimension");
+    energyGraph->GetYaxis()->SetTitle("Temperature (k_{B}T)");
+    energyGraph->GetZaxis()->SetTitle("#beta H");
+    energyGraph->GetXaxis()->SetTitleOffset(1.5);
+    energyGraph->GetYaxis()->SetTitleOffset(2.2);
+    energyGraph->GetZaxis()->SetTitleOffset(1.5);
     gPad->Modified();
-    gPad->SaveAs("2DCheck_FreeEnergyGraph_F2.pdf");
+    gPad->SaveAs("2DCheck_energyGraph_F2.pdf");
 
   
 
 
     fOut->cd();
     magGraph->Write();
-    freeGraph->Write();
+    energyGraph->Write();
 
     fOut->Close();
 
