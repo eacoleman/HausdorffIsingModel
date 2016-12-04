@@ -382,7 +382,6 @@ void IsingModel::setup() {
         exit(EXIT_FAILURE); 
     }
 
-    //FIXME
     // Keep track of the number of site coordinates along each axis
     for(int i=0; i<ceil(hausdorffDim); i++) {
         latticeDimensions.push_back(2*pow(hausdorffSlices,latticeDepth));

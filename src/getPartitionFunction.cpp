@@ -35,27 +35,21 @@ void runIsingModel(TString outName,
     TFile *outFile = new TFile(TString(outName)+".root","RECREATE");
     TTree *outTree = new TTree("HausdorffIsingModel","Simulated data for HausdorffIsingModel");
 
-    Int_t    mag              =0;
     Int_t    magInit          =0;
     Int_t    numSpins         =0;
     Int_t    latticeDepth     =0;
-    Int_t    numMCSteps       =0; 
     Int_t    hausdorffScale   =0;
     Double_t hausdorffSpacing =0;
     Double_t hausdorffDim     =0;
     Double_t hausdorffSpacing =0; 
-    Double_t effH             =0;
     Double_t effHInit         =0;
     Double_t Z                =0; 
     Double_t h                =0;
     Double_t J                =0;
     Double_t sig              =0;
     Double_t kbT              =0;
-    TString  MCMethod         ="METROPOLIS";
 
-    outTree->Branch("m",        &mag);
     outTree->Branch("m_o",      &magInit);
-    outTree->Branch("Ham",      &effH);
     outTree->Branch("Ham_o",    &effHInit);
     outTree->Branch("Z",        &Z);
 
@@ -69,9 +63,6 @@ void runIsingModel(TString outName,
     outTree->Branch("hDim",     &hausdorffDim);
     outTree->Branch("numSpins", &numSpins);
     outTree->Branch("depth",    &latticeDepth);
-
-    outTree->Branch("numSteps", &numMCSteps);
-    outTree->Branch("MCMethod", &hausdorffMethod);
 
     /*
      *  Make the model
@@ -97,7 +88,7 @@ void runIsingModel(TString outName,
         magInit =model.getMagnetization();
         effHInit=model.getEffHamiltonian();
         getTimeDelta();
-    model.runMonteCarlo();
+    Z=model.getPartitionFunction();
         getTimeDelta();
     model.status();
         getTimeDelta();
@@ -107,17 +98,13 @@ void runIsingModel(TString outName,
      */
     h               = model.H();
     J               = model.J();
-    mag             = model.m();
-    effH            = model.getEffHamiltonian();
     latticeDepth    = model.getLatticeDepth();
     hausdorffDim    = model.getHausdorffDimension();
     hausdorffSlices = model.getHausdorffSlices();
     hausdorffSpacing= model.getHausdorffScale();
     sig             = model.getInteractionSigma();
     kbT             = model.kbT();
-    numMCSteps      = model.getNumMCSteps();
     numSpins        = model.getNumSpins();
-    MCMethod        = TString(model.getMCMethod().data());
 
     outTree->Fill();
 
@@ -129,8 +116,5 @@ void runIsingModel(TString outName,
     convGr->Write();
     outTree->Write();
     outFile->Close();
-
-
-
 
 }

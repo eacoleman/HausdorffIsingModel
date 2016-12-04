@@ -8,7 +8,7 @@ import pickle
 import numpy
 
 from PIL import Image, ImageSequence
-from interface/images2gif import writeGif
+from images2gif import writeGif
 
 ROOT.gSystem.Load("libHiggsAnalysisCombinedLimit")
 #ROOT.gROOT.SetBatch()
