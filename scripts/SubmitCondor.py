@@ -7,7 +7,8 @@ pwd=os.environ['PWD']
 # get options
 parser = OptionParser(description='Submit condor jobs for anaSubstructure calls.')
 parser.add_option('--indir',       action='store', dest='indir',    default=pwd, help='Input LHE sample directory')
-parser.add_option('--outdir',      action='store', dest='outdir',   default=pwd, help='Location of output directory')
+parser.add_option('--outdir',      action='store', dest='outdir',   default=pwd+"/output/",
+        help='Location of output directory')
 parser.add_option('--hList',       action='store', dest='h',        default='',  help='List of config h fields')
 parser.add_option('--jList',       action='store', dest='j',        default='',  help='List of config J fields')
 parser.add_option('--tList',       action='store', dest='t',        default='',  help='List of config temps')
@@ -15,6 +16,11 @@ parser.add_option('--sigList',     action='store', dest='sig',      default='', 
 parser.add_option('--mcStepsList', action='store', dest='mcsteps',  default='',  help='List of config # MC steps')
 parser.add_option('--dimList',     action='store', dest='dim',      default='',  help='List of config dimensions')
 parser.add_option('--depthList',   action='store', dest='depth',    default='',  help='List of config depths')
+parser.add_option('--exe',         action='store', dest='ex',       default="src/runIsingModel.cpp",
+        help='Location of ROOT macro')
+parser.add_option('--outeos',      action='store', dest='outeos',
+        default="root://cmseos.fnal.gov:///store/user/ecoleman/HausdorffIsingModel/output/",
+        help='Location of output eos directory')
 
 (options, args) = parser.parse_args()
 cmssw_base = os.environ['CMSSW_BASE']
@@ -50,9 +56,10 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
     conf_tmpl = open('../condor/CondorConf.tmpl.condor')
     for line in conf_tmpl:
         if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
-        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outdir)
+        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outeos)
         if 'OUTPUT_PATH'   in line: line = line.replace('OUTPUT_PATH',   "%s/stdout/"%options.outdir)
         if 'INDIR'         in line: line = line.replace('INDIR',         "%s/"%options.indir)
+        if 'PARAM_H'       in line: line = line.replace('EXEC',          options.ex)
         if 'PARAM_H'       in line: line = line.replace('PARAM_H',       h          )
         if 'PARAM_J'       in line: line = line.replace('PARAM_J',       j          )
         if 'PARAM_T'       in line: line = line.replace('PARAM_T',       t          )
@@ -71,9 +78,10 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
     shel_tmpl = open('../condor/CondorShel.tmpl.sh')
     for line in shel_tmpl:
         if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
-        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outdir)
+        if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outeos)
         if 'OUTPUT_PATH'   in line: line = line.replace('OUTPUT_PATH',   "%s/stdout/"%options.outdir)
         if 'INDIR'         in line: line = line.replace('INDIR',         "%s/"%options.indir)
+        if 'PARAM_H'       in line: line = line.replace('EXEC',          options.ex)
         if 'PARAM_H'       in line: line = line.replace('PARAM_H',       h          )
         if 'PARAM_J'       in line: line = line.replace('PARAM_J',       j          )
         if 'PARAM_T'       in line: line = line.replace('PARAM_T',       t          )

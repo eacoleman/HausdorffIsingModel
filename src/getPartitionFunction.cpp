@@ -20,8 +20,7 @@ bool niceAssert(TString statement, bool isTrue) {
 }
 
 
-void runIsingModel(TString outName, 
-                   Double_t HDIM, 
+void runIsingModel(Double_t HDIM, 
                    Int_t DEPTH, 
                    Double_t KBT, 
                    Double_t SIGMA, 
@@ -32,6 +31,13 @@ void runIsingModel(TString outName,
     /*
      *  Make the ntuple 
      */
+    TString outName = "PARTITION_"+TString(HDIM)+"_d"+TString(DEPTH)
+                                                +"_t"+TString(KBT)
+                                                +"_s"+TString(SIGMA)
+                                                +"_h"+TString(COUPLING_H)
+                                                +"_j"+TString(COUPLING_J)
+                                                +"_m"+TString(NMCSTEPS)
+                                                +"_"+TString(NTHREADS);
     TFile *outFile = new TFile(TString(outName)+".root","RECREATE");
     TTree *outTree = new TTree("HausdorffIsingModel","Simulated data for HausdorffIsingModel");
 

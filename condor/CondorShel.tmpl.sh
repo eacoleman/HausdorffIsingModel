@@ -11,9 +11,9 @@ eval `scramv1 runtime -sh`
 rehash
 
 # Get resources and scripts
-files=(interface output scripts src steerScript.sh)
+files=(src) 
 for file in ${files[*]} ; do
-    cp -r INDIR/* ${_CONDOR_SCRATCH_DIR}/
+    cp -r INDIR/${file} ${_CONDOR_SCRATCH_DIR}/
 done
 
 
@@ -23,15 +23,7 @@ cd ${_CONDOR_SCRATCH_DIR}
 chmod 777 * 
 
 # Run model, plot
-sh steerScript RUN \
-    PARAM_H \
-    PARAM_J \
-    PARAM_T \
-    PARAM_SIG \
-    PARAM_MCSTEPS \
-    PARAM_DIM \
-    PARAM_DEPTH
-sh steerScript BASE_GIFS
+root -l -b -q "EXEC(PARAM_DIM, PARAM_DEPTH, PARAM_T, PARAM_SIG, PARAM_H, PARAM_J, PARAM_MCSTEPS, 40)"
 
 # Copy results to output directory
 xrdcp */*.{png,jpg,root} OUTDIR
