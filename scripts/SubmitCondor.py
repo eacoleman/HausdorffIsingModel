@@ -9,6 +9,10 @@ parser = OptionParser(description='Submit condor jobs for anaSubstructure calls.
 parser.add_option('--indir',       action='store', dest='indir',    default=pwd, help='Input LHE sample directory')
 parser.add_option('--outdir',      action='store', dest='outdir',   default=pwd+"/output/",
         help='Location of output directory')
+parser.add_option('--min',     action='store', dest='minJob',      default=-1,
+        help='Job number to start at')
+parser.add_option('--max',     action='store', dest='maxJob',      default=-1,
+        help='Maximum number of jobs to perform')
 parser.add_option('--hList',       action='store', dest='h',        default='',  help='List of config h fields')
 parser.add_option('--jList',       action='store', dest='j',        default='',  help='List of config J fields')
 parser.add_option('--tList',       action='store', dest='t',        default='',  help='List of config temps')
@@ -36,24 +40,40 @@ if not os.path.exists(options.outdir):
     os.system('mkdir -p ' + options.outdir + '/stdout/')
 
 from math import ceil
-nFilesPerLHE=int(ceil(float(options.maxEvents)/float(options.evPerJob)))
+#nFilesPerLHE=int(ceil(float(options.maxEvents)/float(options.evPerJob)))
+
+hList=options.h.split(',')
+jList=options.j.split(',')
+tList=options.t.split(',')
+sigList=options.sig.split(',')
+dimList=options.dim.split(',')
+depList=options.depth.split(',')
+mcSteps=options.mcsteps.split(',')
+
 
 # prepare all configs
+nJob=0
 for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
-        for a in options.h.split(',')
-        for b in options.j.split(',')
-        for c in options.t.split(',')
-        for d in options.sig.split(',')
-        for f in options.mcsteps.split(',')
-        for f in options.dim.split(',')
-        for g in options.depth.split(',')] :
+        for a in hList
+        for b in jList
+        for c in tList
+        for d in sigList
+        for e in mcSteps
+        for f in dimList
+        for g in depList] :
+    print nJob
+    if h == "" or j == "" or t=="" or sig=="" or mcsteps=="" or dim=="" or depth=="" : continue
+    if nJob>float(options.maxJob) : break
+    if nJob<float(options.minJob) :
+        nJob+=1
+        continue
 
-    current_name = "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+    current_name = "dim"+dim+"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth
     current_conf = open(current_name.replace('.','p') + '.condor','w')
     current_shel = open(current_name.replace('.','p') + '.sh','w')
 
     # write condor config
-    conf_tmpl = open('../condor/CondorConf.tmpl.condor')
+    conf_tmpl = open('./condor/CondorConf.tmpl.condor')
     for line in conf_tmpl:
         if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
         if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outeos)
@@ -68,14 +88,14 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
         if 'PARAM_DIM'     in line: line = line.replace('PARAM_DIM',     dim        )
         if 'PARAM_DEPTH'   in line: line = line.replace('PARAM_DEPTH',   depth      )
         if 'NAME'          in line: line = line.replace('NAME',
-                "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+                "dim"+dim+"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
 
         current_conf.write(line)
 
     conf_tmpl.close()
 
     # write shell script
-    shel_tmpl = open('../condor/CondorShel.tmpl.sh')
+    shel_tmpl = open('./condor/CondorShel.tmpl.sh')
     for line in shel_tmpl:
         if 'CMSSWBASE'     in line: line = line.replace('CMSSWBASE',     cmssw_base)
         if 'OUTDIR'        in line: line = line.replace('OUTDIR',        options.outeos)
@@ -90,7 +110,7 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
         if 'PARAM_DIM'     in line: line = line.replace('PARAM_DIM',     dim        )
         if 'PARAM_DEPTH'   in line: line = line.replace('PARAM_DEPTH',   depth      )
         if 'NAME'          in line: line = line.replace('NAME',
-                "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+                "dim"+dim+"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
 
         current_shel.write(line)
 
@@ -98,9 +118,11 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
 
     current_conf.close()
     current_shel.close()
+    nJob+=1
 
 # end loop so that Python writes files
 # run jobs
+nJob=0
 for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
         for a in options.h.split(',')
         for b in options.j.split(',')
@@ -109,9 +131,15 @@ for h,j,t,sig,mcsteps,dim,depth in [(a,b,c,d,e,f,g)
         for f in options.mcsteps.split(',')
         for f in options.dim.split(',')
         for g in options.depth.split(',')] :
+    if h == "" or j == "" or t=="" or sig=="" or mcsteps=="" or dim=="" or depth=="" : continue
+    if nJob>options.max : break
+    if nJob<options.min :
+        nJob+=1
+        continue
 
-    current_name = "dim"+dim"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth)
+    current_name = "dim"+dim+"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth
     current_conf = current_name.replace('.','p') + '.condor'
 
     os.chdir(options.outdir + '/')
     os.system('condor_submit ' + current_conf)
+    nJob+=1

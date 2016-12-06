@@ -19,14 +19,21 @@ if [[ "$1" == "" ]] ; then
     exit 0 
 fi
 
-# Sample settings (to be modified)
-hList="1,-1"
-jList="1,-1"
-tList="0.01,0.10,0.50,1.00"
-sigList="-1,-0.5,0,0.5,1,2"
-mcStepsList="10000"
-dimList="0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0"
+# Sample settings 
+t=("0.5" "10" "0.5")
+h=("0" "2" "0.5")
+j=("-5" "5" "0.5")
+s=("0" "3" "0.5")
+H=("0.05" "4" "0.05")
 
+hList=$(awk "BEGIN{ for (i=${h[0]}; i <= ${h[1]}; i+= ${h[2]}) printf(\"%.2f,\",i); }")
+jList=$(awk "BEGIN{ for (i=${j[0]}; i <= ${j[1]}; i+= ${j[2]}) printf(\"%.2f,\",i); }") 
+tList=$(awk "BEGIN{ for (i=${t[0]}; i <= ${t[1]}; i+= ${t[2]}) printf(\"%.2f,\",i); }") 
+sigList=$(awk "BEGIN{ for (i=${s[0]}; i <= ${s[1]}; i+= ${s[2]}) printf(\"%.2f,\",i); }")
+dimList=$(awk "BEGIN{ for (i=${H[0]}; i <= ${H[1]}; i+= ${H[2]}) printf(\"%.2f,\",i); }")
+
+depList="1,2,3,4"
+mcStepsList="10,100,1000,10000"
 
 ######################### Nothing below should change #########################
 
@@ -54,16 +61,25 @@ root -l -b -q src/testIsingModel.cpp
 JOBS )
 echo "Starting grid jobs:"
 
-python/SubmitCondor.py \
+echo h: ${hList}
+echo j: ${jList}
+echo t: ${tList}
+echo s: ${sigList}
+echo H: ${dimList}
+echo d: ${depList}
+echo m: ${mcStepsList}
+
+python scripts/SubmitCondor.py \
     --indir ${PWD} \
     --outdir ${PWD}/output/ \
-    --hList $hList \
-    --jList $jList \
-    --tList $tList \
-    --sigList $sigList \
-    --mcSList $mcSList \
+    --hList ${hList} \
+    --jList ${jList} \
+    --tList ${tList} \
+    --sigList ${sigList} \
+    --mcStepsList $mcStepsList \
     --dimList $dimList \
-    --depthList $depthList
+    --depthList ${depList} \
+    --min 0 --max 100
 
 ;;
 
