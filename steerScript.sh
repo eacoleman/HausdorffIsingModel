@@ -33,7 +33,9 @@ sigList=$(awk "BEGIN{ for (i=${s[0]}; i <= ${s[1]}; i+= ${s[2]}) printf(\"%.2f,\
 dimList=$(awk "BEGIN{ for (i=${H[0]}; i <= ${H[1]}; i+= ${H[2]}) printf(\"%.2f,\",i); }")
 
 depList="1,2,3,4"
+depListSize=4
 mcStepsList="10,100,1000,10000"
+mcStepsListSize=4
 
 ######################### Nothing below should change #########################
 
@@ -69,17 +71,43 @@ echo H: ${dimList}
 echo d: ${depList}
 echo m: ${mcStepsList}
 
-python scripts/SubmitCondor.py \
-    --indir ${PWD} \
-    --outdir ${PWD}/output/ \
-    --hList ${hList} \
-    --jList ${jList} \
-    --tList ${tList} \
-    --sigList ${sigList} \
-    --mcStepsList $mcStepsList \
-    --dimList $dimList \
-    --depthList ${depList} \
-    --min 0 --max 100
+arrSize=1
+let arrSize*=$(awk "BEGIN{ j=0; for (i=${h[0]}; i <= ${h[1]}; i+= ${h[2]}) j+=1; printf(\"%i\",j); }")
+let arrSize*=$(awk "BEGIN{ j=0; for (i=${j[0]}; i <= ${j[1]}; i+= ${j[2]}) j+=1; printf(\"%i\",j); }")
+let arrSize*=$(awk "BEGIN{ j=0; for (i=${t[0]}; i <= ${t[1]}; i+= ${t[2]}) j+=1; printf(\"%i\",j); }")
+let arrSize*=$(awk "BEGIN{ j=0; for (i=${s[0]}; i <= ${s[1]}; i+= ${s[2]}) j+=1; printf(\"%i\",j); }")
+let arrSize*=$(awk "BEGIN{ j=0; for (i=${H[0]}; i <= ${H[1]}; i+= ${H[2]}) j+=1; printf(\"%i\",j); }")
+let arrSize*=depListSize
+let arrSize*=mcStepsListSize
+echo $arrSize
+
+cp -r src/ /eos/uscms/store/user/ecoleman/HausdorffIsingModel/
+
+i=0
+step=10
+while [[ $i -lt $arrSize ]] ; do
+
+    until [[ $(condor_q ecoleman | wc -l) -gt 1000 ]] ; do
+        echo "Sleeping..."
+        sleep 10
+    done
+    
+    python scripts/SubmitCondor.py \
+        --indir ${PWD} \
+        --outdir ${PWD}/output/ \
+        --hList ${hList} \
+        --jList ${jList} \
+        --tList ${tList} \
+        --sigList ${sigList} \
+        --mcStepsList $mcStepsList \
+        --dimList $dimList \
+        --depthList ${depList} \
+        --min $i --max $((i+step))
+        #--min 0 --max 100
+    
+    let i+=$step
+
+done
 
 ;;
 

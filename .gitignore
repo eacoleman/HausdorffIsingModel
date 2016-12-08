@@ -5,3 +5,6 @@ output/*
 testIsingModel
 runIsingModel
 *.root
+*.png
+*.out
+*.pdf

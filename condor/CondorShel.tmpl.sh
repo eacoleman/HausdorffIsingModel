@@ -11,9 +11,12 @@ eval `scramv1 runtime -sh`
 rehash
 
 # Get resources and scripts
-files=(src) 
-for file in ${files[*]} ; do
-    cp -r INDIR/${file} ${_CONDOR_SCRATCH_DIR}/
+files=(src src/interface) 
+for dir in ${files[*]} ; do
+    mkdir -p $_CONDOR_SCRATCH_DIR/$dir
+for file in $(xrdfs root://cmseos.fnal.gov ls -u /store/user/ecoleman/HausdorffIsingModel/$dir/) ; do
+    xrdcp $file ${_CONDOR_SCRATCH_DIR}/$dir/
+done
 done
 
 
