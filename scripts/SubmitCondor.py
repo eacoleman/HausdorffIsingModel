@@ -65,12 +65,13 @@ iterList=  [(a,b,c,d,e,f,g)
 # prepare all configs
 nJob=0
 for h,j,t,sig,mcsteps,dim,depth in iterList :
-    print nJob
-    if h == "" or j == "" or t=="" or sig=="" or mcsteps=="" or dim=="" or depth=="" : continue
+    if h == "" or j == "" or t=="" or sig=="" or mcsteps=="" or dim=="" or depth=="" :
+        continue
     if nJob>float(options.maxJob) : break
     if nJob<float(options.minJob) :
         nJob+=1
         continue
+    print nJob
 
     current_name = options.ex.split('/')[1]+"_dim"+dim+"_h"+h+"_j"+j+"_t"+t+"_s"+sig+"_m"+mcsteps+"_dep"+depth
     current_name = current_name.replace('.','p')
@@ -129,12 +130,9 @@ for h,j,t,sig,mcsteps,dim,depth in iterList :
 nJob=0
 for h,j,t,sig,mcsteps,dim,depth in iterList :
     if h == "" or j == "" or t=="" or sig=="" or mcsteps=="" or dim=="" or depth=="" :
-        print "HERE1"
         continue
-
     if nJob>float(options.maxJob) : break
     if nJob<float(options.minJob) :
-        print "HERE2"
         nJob+=1
         continue
 

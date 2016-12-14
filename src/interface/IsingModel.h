@@ -62,13 +62,13 @@ class IsingModel {
                 const std::vector<int>& flips=std::vector<int>());
 
         // Shorthand definitions
-        const double J()  {return J                         ;}
-        const double H()  {return H                         ;}
-        const double K()  {return J/kbT                     ;}
-        const double h()  {return H/kbT                     ;}
-        const int    m()  {return getMagnetization()        ;}
-        const double Z()  {return computePartitionFunction();}
-        const double kbT(){return kbT                       ;}
+        const double getJ()  {return J                         ;}
+        const double getH()  {return H                         ;}
+        const double getK()  {return J/kbT                     ;}
+        const double geth()  {return H/kbT                     ;}
+        const int    getm()  {return getMagnetization()        ;}
+        const double getZ()  {return computePartitionFunction();}
+        const double getkbT(){return kbT                       ;}
 
         // Simulation
         void setup();

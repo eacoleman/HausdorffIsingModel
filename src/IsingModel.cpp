@@ -193,13 +193,16 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
         int spinFlip=
             (std::find(flips.begin(),flips.end(),i)!=flips.end() ? -1 : 1);
 
-        energy -= h()*s.S*spinFlip;
+        energy -= geth()*s.S*spinFlip;
+
 
         // Nearest neighbor sum, no circular boundary conditions
         for(int j=0,p=latticeDimensions.size(); j < p; j++) {
             double indexPM = pow(latticeDimensions.at(j),p-1-j);
             
-            if(i > indexPM && s.coords.at(j) != xmin && spinArray.at(i-indexPM).coords.at(j) != xmax) {
+            // get to the left
+            if(i > indexPM-1 && s.coords.at(j) != xmin 
+               && spinArray.at(i-indexPM).coords.at(j) != xmax) {
                 int newIndex=i-indexPM;
 
                 if(spinArray.at(newIndex).active) {
@@ -207,22 +210,24 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
                     int tspinFlip=
                         (std::find(flips.begin(),flips.end(),newIndex)!=flips.end() ? -1 : 1); 
     
-                    energy -= K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
-                              *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip;
+                    energy -= getK()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
+                              *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip/2;
 
                 }
             } 
 
-            if (i + indexPM < nSpins && s.coords.at(j) != xmax && spinArray.at(i+indexPM).coords.at(j) != xmin) {
+            // get to the right
+            if(i + indexPM < nSpins && s.coords.at(j) != xmax 
+               && spinArray.at(i+indexPM).coords.at(j) != xmin) {
                 int newIndex=i+indexPM;
-
+                
                 if(spinArray.at(newIndex).active) {
             
                     int tspinFlip=
                         (std::find(flips.begin(),flips.end(),newIndex)!=flips.end() ? -1 : 1); 
     
-                    energy -= K()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
-                              *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip;
+                    energy -= getK()*pow(getDistanceSq(s,spinArray.at(newIndex)),interactionSigma/2)
+                              *s.S*spinArray.at(newIndex).S*spinFlip*tspinFlip/2;
 
                 }
             }
@@ -239,20 +244,21 @@ const double IsingModel::getEffHamiltonian(const std::vector<int>& flips) {
  *    | (vector<int> (default: empty)) array of spin indices to flip 
  */
 const double IsingModel::computePartitionFunction(const int start, const std::vector<int>& flips) {
-    if(debug) std::cout<<"\tComputePartitionFunction:"<<std::endl;
+    if(start >= nSpins) return 0;
     double Z=0;
+
     
     std::vector<int> newflips = flips; 
     newflips.push_back(start);
 
     // add e^-BH with S_i = +1 and S_i = -1
-    Z+=exp(getEffHamiltonian(flips));
     Z+=exp(getEffHamiltonian(newflips));
 
     // branch into computations with history 
     // S_i = +1 and S_i = -1
     Z+=computePartitionFunction(start+1,newflips);
     Z+=computePartitionFunction(start+1,flips);
+    if(start == 0) Z+=exp(getEffHamiltonian());
 
     return Z; 
 }
@@ -351,15 +357,6 @@ void IsingModel::addSpins(const int depth,
     if(debug) std::cout<<"\t\t- spinArray made, sorting..."<<std::endl;
     QuickSort(spinArray,0,nSpins-1);
 
-/*
-    for(int i=0; i < spinArray.size(); i++) {      
-        std::cout<<"Spin "<<i<<": (";     
-        for(int j=0; j < spinArray.at(i).coords.size(); j++) {        
-            std::cout<<std::setw(10)<<spinArray.at(i).coords.at(j)<<", ";        
-        }     
-        std::cout<<")"<<std::endl;        
-    }
-*/
 }
 
 
@@ -618,7 +615,7 @@ void IsingModel::reset() {
  */
 void IsingModel::status() {
     std::cout<<"\t\t| Magnetization:   "<<getMagnetization()     <<std::endl;
-    std::cout<<"\t\t| Eff. energy:     "<<getEffHamiltonian()        <<std::endl;
+    std::cout<<"\t\t| Eff. energy:     "<<getEffHamiltonian()    <<std::endl;
     std::cout<<"\t\t| Hausdorff dim.:  "<<getHausdorffDimension()<<std::endl;
     std::cout<<"\t\t| Lattice copies:  "<<getHausdorffSlices()   <<std::endl;
     std::cout<<"\t\t| Lattice scaling: "<<getHausdorffScale()    <<std::endl;

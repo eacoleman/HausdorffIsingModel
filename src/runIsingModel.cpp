@@ -7,7 +7,7 @@
 std::clock_t start = std::clock();
 double getTimeDelta() {
     double value=((float) std::clock()-start)/1000000;
-    std::cout<<"\t\t- Done. It took "<<value<<" s"<<std::endl;
+    std::cout<<"\t- Done. It took "<<value<<" s"<<std::endl;
     start = std::clock();
     return value; 
 }
@@ -31,53 +31,50 @@ void runIsingModel(Double_t HDIM,
     /*
      *  Make the ntuple 
      */
-    TString outName = TString(HDIM)+"_d"+TString(DEPTH)
-                                   +"_t"+TString(KBT)
-                                   +"_s"+TString(SIGMA)
-                                   +"_h"+TString(COUPLING_H)
-                                   +"_j"+TString(COUPLING_J)
-                                   +"_m"+TString(NMCSTEPS)
-                                   +"_"+TString(NTHREADS);
-    TFile *outFile = new TFile(TString(outName)+".root","RECREATE");
+    std::cout<<"\t - Making model"<<std::endl;
+    char name[256];
+    sprintf(name, "%1.2f_d%i_%3.2ft_%1.2fs_%2.2fh_%2.2fj_%im_%i",
+                HDIM,DEPTH,KBT,SIGMA,
+                COUPLING_H,COUPLING_J,NMCSTEPS,NTHREADS);
+    TFile *outFile = new TFile(TString(name).ReplaceAll(".","-")+".root","RECREATE");
     TTree *outTree = new TTree("HausdorffIsingModel","Simulated data for HausdorffIsingModel");
 
-    Int_t    mag              =0;
-    Int_t    magInit          =0;
-    Int_t    numSpins         =0;
-    Int_t    latticeDepth     =0;
-    Int_t    numMCSteps       =0; 
-    Int_t    hausdorffScale   =0;
-    Double_t hausdorffSpacing =0;
-    Double_t hausdorffDim     =0;
-    Double_t hausdorffSpacing =0; 
-    Double_t effH             =0;
-    Double_t effHInit         =0;
-    Double_t Z                =0; 
-    Double_t h                =0;
-    Double_t J                =0;
-    Double_t sig              =0;
-    Double_t kbT              =0;
-    TString  MCMethod         ="METROPOLIS";
+    Int_t    tmag              =0;
+    Int_t    tmagInit          =0;
+    Int_t    tnumSpins         =0;
+    Int_t    tlatticeDepth     =0;
+    Int_t    tnumMCSteps       =0; 
+    Int_t    thausdorffSlices  =0;
+    Double_t thausdorffSpacing =0;
+    Double_t thausdorffDim     =0;
+    Double_t teffH             =0;
+    Double_t teffHInit         =0;
+    Double_t tZ                =0; 
+    Double_t th                =0;
+    Double_t tJ                =0;
+    Double_t tsig              =0;
+    Double_t tkbT              =0;
+    TString  tMCMethod         ="METROPOLIS";
 
-    outTree->Branch("m",        &mag);
-    outTree->Branch("m_o",      &magInit);
-    outTree->Branch("Ham",      &effH);
-    outTree->Branch("Ham_o",    &effHInit);
-    outTree->Branch("Z",        &Z);
+    outTree->Branch("m",        &tmag);
+    outTree->Branch("m_o",      &tmagInit);
+    outTree->Branch("Ham",      &teffH);
+    outTree->Branch("Ham_o",    &teffHInit);
+    outTree->Branch("Z",        &tZ);
 
-    outTree->Branch("h",        &h);
-    outTree->Branch("J",        &J);
-    outTree->Branch("sigma",    &sig);
-    outTree->Branch("kbT",      &kbT);
+    outTree->Branch("h",        &th);
+    outTree->Branch("J",        &tJ);
+    outTree->Branch("sigma",    &tsig);
+    outTree->Branch("kbT",      &tkbT);
 
-    outTree->Branch("hScale",   &hausdorffScale);
-    outTree->Branch("hSpacing", &hausdorffSpacing);
-    outTree->Branch("hDim",     &hausdorffDim);
-    outTree->Branch("numSpins", &numSpins);
-    outTree->Branch("depth",    &latticeDepth);
+    outTree->Branch("hSlices",  &thausdorffSlices);
+    outTree->Branch("hSpacing", &thausdorffSpacing);
+    outTree->Branch("hDim",     &thausdorffDim);
+    outTree->Branch("numSpins", &tnumSpins);
+    outTree->Branch("depth",    &tlatticeDepth);
 
-    outTree->Branch("numSteps", &numMCSteps);
-    outTree->Branch("MCMethod", &hausdorffMethod);
+    outTree->Branch("numSteps", &tnumMCSteps);
+    outTree->Branch("MCMethod", &tMCMethod);
 
     /*
      *  Make the model
@@ -97,11 +94,12 @@ void runIsingModel(Double_t HDIM,
     /*
      *  Run the model
      */
+    std::cout<<"\t - Running model"<<std::endl;
     model.setup();
         getTimeDelta();
     model.randomizeSpins();
-        magInit =model.getMagnetization();
-        effHInit=model.getEffHamiltonian();
+        tmagInit =model.getMagnetization();
+        teffHInit=model.getEffHamiltonian();
         getTimeDelta();
     model.runMonteCarlo();
         getTimeDelta();
@@ -111,25 +109,26 @@ void runIsingModel(Double_t HDIM,
     /*
      *  Store the results
      */
-    h               = model.H();
-    J               = model.J();
-    mag             = model.m();
-    effH            = model.getEffHamiltonian();
-    latticeDepth    = model.getLatticeDepth();
-    hausdorffDim    = model.getHausdorffDimension();
-    hausdorffSlices = model.getHausdorffSlices();
-    hausdorffSpacing= model.getHausdorffScale();
-    sig             = model.getInteractionSigma();
-    kbT             = model.kbT();
-    numMCSteps      = model.getNumMCSteps();
-    numSpins        = model.getNumSpins();
-    MCMethod        = TString(model.getMCMethod().data());
+    th               = model.getH();
+    tJ               = model.getJ();
+    tmag             = model.getm();
+    teffH            = model.getEffHamiltonian();
+    tlatticeDepth    = model.getLatticeDepth();
+    thausdorffDim    = model.getHausdorffDimension();
+    thausdorffSlices = model.getHausdorffSlices();
+    thausdorffSpacing= model.getHausdorffScale();
+    tsig             = model.getInteractionSigma();
+    tkbT             = model.getkbT();
+    tnumMCSteps      = model.getNumMCSteps();
+    tnumSpins        = model.getNumSpins();
+    tMCMethod        = TString(model.getMCMethod().data());
 
     outTree->Fill();
 
     /*
      *  Write the output 
      */
+    std::cout<<"\t - Writing output"<<std::endl;
     outFile->cd();
     TGraph *convGr = (TGraph*) model.getConvergenceGr()->Clone();
     convGr->Write();

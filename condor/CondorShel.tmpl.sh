@@ -8,9 +8,11 @@ export PATH=/bin:/usr/bin:/usr/local/bin:/usr/krb5/bin:/usr/afsws/bin:/usr/krb5/
 cd CMSSWBASE/src/ 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 eval `scramv1 runtime -sh`
-rehash
 
 # Get resources and scripts
+echo ""
+echo ""
+echo " --- COPYING FILES ---"
 files=(src src/interface) 
 for dir in ${files[*]} ; do
     mkdir -p $_CONDOR_SCRATCH_DIR/$dir
@@ -22,14 +24,24 @@ done
 
 cd ${_CONDOR_SCRATCH_DIR}
 
-# Set permissions
-chmod 777 * 
-
 # Run model, plot
+echo ""
+echo ""
+echo " --- RUNNING EXE ---"
 root -l -b -q "EXEC(PARAM_DIM, PARAM_DEPTH, PARAM_T, PARAM_SIG, PARAM_H, PARAM_J, PARAM_MCSTEPS, 40)"
 
 # Copy results to output directory
-xrdcp */*.{png,jpg,root} OUTDIR
+echo ""
+echo ""
+echo " --- MOVING FILES ---"
+ls -u $_CONDOR_SCRATCH_DIR
+for file in $(ls -u $_CONDOR_SCRATCH_DIR/) ; do 
+    if [[ "condor" =~ "$file" ]] ; then 
+        continue
+    fi
+    echo "\nMoving $file"
+    xrdcp $file OUTDIR
+done
 
 # Clear output to prevent unwanted transfers
 rm -rf condor 
